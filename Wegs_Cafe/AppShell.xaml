@@ -6,9 +6,26 @@
     xmlns:local="clr-namespace:Wegs_Cafe"
     Title="Wegs_Cafe">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <TabBar>
+        <Tab Title="Home">
+            <ShellContent ContentTemplate="{DataTemplate views:HomePage}" Route="HomePage" />
+        </Tab>
+
+        <Tab Title="Menu">
+            <ShellContent ContentTemplate="{DataTemplate views:MenuPage}" Route="MenuPage" />
+        </Tab>
+
+        <Tab Title="About">
+            <ShellContent ContentTemplate="{DataTemplate views:AboutPage}" Route="AboutPage" />
+        </Tab>
+
+        <Tab Title="Contact">
+            <ShellContent ContentTemplate="{DataTemplate views:ContactPage}" Route="ContactPage" />
+        </Tab>
+
+        <Tab Title="Login">
+            <ShellContent ContentTemplate="{DataTemplate views:LoginPage}" Route="LoginPage" />
+        </Tab>
+    </TabBar>
 
 </Shell>

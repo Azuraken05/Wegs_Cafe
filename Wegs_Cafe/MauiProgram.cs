@@ -16,9 +16,10 @@ namespace Wegs_Cafe
                 });
 
 #if DEBUG
-    		builder.Logging.AddDebug();
-#endif
 
+            builder.Logging.AddDebug();
+#endif
+            builder.Services.AddSingleton<Services.FirebaseService>();
             return builder.Build();
         }
     }
