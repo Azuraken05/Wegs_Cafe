@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:services="clr-namespace:Wegs_Cafe.Services"
+             x:Class="Wegs_Cafe.Views.PrinterSettingsPage"
+             x:DataType="vm:PrinterSettingsViewModel"
+             Title="Printer"
+             BackgroundColor="{StaticResource PureWhite}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16" MaximumWidthRequest="560" HorizontalOptions="Center">
+            <Label Text="Thermal Printer Settings" Style="{StaticResource HeadingLabel}" />
+
+            <Border Style="{StaticResource CreamCard}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Selected printer" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding SelectedName}" Style="{StaticResource SubHeadingLabel}" />
+                    <Button Text="Forget printer" Style="{StaticResource SecondaryButton}" HeightRequest="38" FontSize="12"
+                            Command="{Binding ForgetCommand}" HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Paper width" Style="{StaticResource SubHeadingLabel}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Text="58 mm (32 chars)" Style="{StaticResource PillButton}" Command="{Binding SetWidthCommand}" CommandParameter="58">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding Is58}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                            <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Grid.Column="1" Text="80 mm (48 chars)" Style="{StaticResource PillButton}" Command="{Binding SetWidthCommand}" CommandParameter="80">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding Is80}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                            <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Text="Scan paired devices" Style="{StaticResource PrimaryButton}" Command="{Binding ScanCommand}" IsEnabled="{Binding IsNotBusy}" />
+                <Button Grid.Column="1" Text="Test print" Style="{StaticResource SecondaryButton}" Command="{Binding TestCommand}" IsEnabled="{Binding IsNotBusy}" />
+            </Grid>
+
+            <CollectionView ItemsSource="{Binding Devices}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label Text="Pair your Bluetooth printer in Android settings first, then tap Scan." Style="{StaticResource MutedLabel}" Margin="0,20" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="services:PrinterDevice">
+                        <Border Style="{StaticResource Card}" Padding="14">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="{Binding Name}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="1" Text="Use" Style="{StaticResource PrimaryButton}" HeightRequest="38" FontSize="12" Clicked="OnSelectClicked" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

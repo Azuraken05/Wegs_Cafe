@@ -9,11 +9,17 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/WegsStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Global converters: use as {StaticResource CurrencyConverter} -->
             <converters:CurrencyConverter x:Key="CurrencyConverter" />
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:StringEmptyConverter x:Key="StringEmptyConverter" />
+            <converters:ImagePathConverter x:Key="ImagePathConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
+
+

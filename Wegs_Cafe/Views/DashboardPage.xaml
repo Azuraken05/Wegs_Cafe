@@ -1,0 +1,296 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             xmlns:helpers="clr-namespace:Wegs_Cafe.Helpers"
+             x:Class="Wegs_Cafe.Views.DashboardPage"
+             x:DataType="vm:DashboardViewModel"
+             Title="Dashboard"
+             BackgroundColor="{StaticResource PureWhite}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18" MaximumWidthRequest="1140" HorizontalOptions="Fill">
+
+            <!-- Header & Period Filter Pills (Day / Week / Month) -->
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                    <Label Text="Sales Analytics &amp; Overview" Style="{StaticResource HeadingLabel}" />
+                    <Label Text="{Binding PeriodSubtitle}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+
+                <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                    <Button Text="Day" Style="{StaticResource PillButton}" HeightRequest="38" Command="{Binding SetPeriodCommand}" CommandParameter="Day">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsDay}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Week" Style="{StaticResource PillButton}" HeightRequest="38" Command="{Binding SetPeriodCommand}" CommandParameter="Week">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsWeek}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Month" Style="{StaticResource PillButton}" HeightRequest="38" Command="{Binding SetPeriodCommand}" CommandParameter="Month">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsMonth}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+            <!-- Low-Stock Alert Banner (Owner & Manager) -->
+            <Border Style="{StaticResource Card}" Stroke="{StaticResource AlertWarning}" StrokeThickness="2" IsVisible="{Binding HasLowStock}">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Border Style="{StaticResource LowStockBadge}" VerticalOptions="Center">
+                            <Label Text="LOW STOCK ALERT" Style="{StaticResource BadgeLabel}" />
+                        </Border>
+                        <Label Text="{Binding LowStockTitle}" Style="{StaticResource SubHeadingLabel}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding LowStock}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:Product">
+                                <Border Style="{StaticResource CreamCard}" Padding="12,10">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding StockText, StringFormat='Remaining: {0}'}" Style="{StaticResource MutedLabel}" />
+                                        </VerticalStackLayout>
+                                        <Border Grid.Column="1" Style="{StaticResource OutOfStockBadge}" IsVisible="{Binding IsOutOfStock}" VerticalOptions="Center">
+                                            <Label Text="Out of stock" Style="{StaticResource BadgeLabel}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource LowStockBadge}" IsVisible="{Binding IsLowStock}" VerticalOptions="Center">
+                                            <Label Text="Low stock" Style="{StaticResource BadgeLabel}" />
+                                        </Border>
+                                        <Button Grid.Column="2" Text="Quick Restock" Style="{StaticResource PrimaryButton}" HeightRequest="36" FontSize="12" Padding="14,0"
+                                                VerticalOptions="Center" Clicked="OnQuickRestockClicked" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- KPI Cards Row -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                <!-- Gross Sales -->
+                <Border Style="{StaticResource BlackCard}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="GROSS SALES" TextColor="{StaticResource BorderGray}" FontSize="11" FontFamily="Heading" />
+                        <Label Text="{Binding GrossSales, StringFormat='₱{0:N2}'}" TextColor="{StaticResource PureWhite}" FontFamily="Heading" FontSize="26" />
+                        <Label Text="{Binding TotalItemsSold, StringFormat='{0} items sold'}" TextColor="{StaticResource BorderGray}" FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Total Orders -->
+                <Border Grid.Column="1" Style="{StaticResource CreamCard}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="COMPLETED ORDERS" Style="{StaticResource MutedLabel}" FontFamily="Heading" FontSize="11" />
+                        <Label Text="{Binding TotalOrders}" Style="{StaticResource HeadingLabel}" FontSize="26" />
+                        <Label Text="{Binding VoidedOrders, StringFormat='{0} voided'}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Average Order Value -->
+                <Border Grid.Row="1" Style="{StaticResource CreamCard}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="AVERAGE ORDER VALUE" Style="{StaticResource MutedLabel}" FontFamily="Heading" FontSize="11" />
+                        <Label Text="{Binding AverageOrderValue, StringFormat='₱{0:N2}'}" Style="{StaticResource HeadingLabel}" FontSize="24" />
+                        <Label Text="Per completed receipt" Style="{StaticResource MutedLabel}" FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Owner Profit Margin Card (Owner-only) / Items Sold summary -->
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource CreamCard}">
+                    <VerticalStackLayout Spacing="4">
+                        <VerticalStackLayout Spacing="4" IsVisible="{Binding IsOwner}">
+                            <Label Text="EST. NET PROFIT (OWNER)" Style="{StaticResource MutedLabel}" FontFamily="Heading" FontSize="11" />
+                            <Label Text="{Binding EstimatedProfit, StringFormat='₱{0:N2}'}" TextColor="{StaticResource AlertSuccess}" FontFamily="Heading" FontSize="24" />
+                            <Label Text="{Binding ProfitMarginPercent, StringFormat='Margin: {0:N1}%'}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="4" IsVisible="{Binding IsOwner, Converter={StaticResource InverseBoolConverter}}">
+                            <Label Text="ITEMS SOLD" Style="{StaticResource MutedLabel}" FontFamily="Heading" FontSize="11" />
+                            <Label Text="{Binding TotalItemsSold}" Style="{StaticResource HeadingLabel}" FontSize="24" />
+                            <Label Text="Across all categories" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Sales Bar & Trend Line Graph -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Sales Revenue Graph" Style="{StaticResource SubHeadingLabel}" />
+                            <Label Text="High-contrast bars (₱ revenue) with trend line" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1" Style="{StaticResource PaidBadge}" VerticalOptions="Center">
+                            <Label Text="LIVE" Style="{StaticResource BadgeLabel}" />
+                        </Border>
+                    </Grid>
+
+                    <GraphicsView x:Name="SalesChartView"
+                                  Drawable="{Binding SalesChart}"
+                                  HeightRequest="250"
+                                  HorizontalOptions="Fill" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Payment Method Breakdown Card with Visual Distribution Bar -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Payment Method Breakdown" Style="{StaticResource SubHeadingLabel}" />
+
+                    <GraphicsView x:Name="PaymentChartView"
+                                  Drawable="{Binding PaymentChart}"
+                                  HeightRequest="16"
+                                  HorizontalOptions="Fill" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <Border Style="{StaticResource CreamCard}" Padding="12">
+                            <VerticalStackLayout Spacing="2">
+                                <HorizontalStackLayout Spacing="6">
+                                    <BoxView WidthRequest="10" HeightRequest="10" CornerRadius="5" Color="{StaticResource PrimaryBlack}" VerticalOptions="Center" />
+                                    <Label Text="Cash" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding Cash, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" />
+                                <Label Text="{Binding CashPercentText}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource CreamCard}" Padding="12">
+                            <VerticalStackLayout Spacing="2">
+                                <HorizontalStackLayout Spacing="6">
+                                    <BoxView WidthRequest="10" HeightRequest="10" CornerRadius="5" Color="{StaticResource AlertSuccess}" VerticalOptions="Center" />
+                                    <Label Text="GCash" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding GCash, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" />
+                                <Label Text="{Binding GCashPercentText}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource CreamCard}" Padding="12">
+                            <VerticalStackLayout Spacing="2">
+                                <HorizontalStackLayout Spacing="6">
+                                    <BoxView WidthRequest="10" HeightRequest="10" CornerRadius="5" Color="{StaticResource MutedText}" VerticalOptions="Center" />
+                                    <Label Text="Card" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding Card, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" />
+                                <Label Text="{Binding CardPercentText}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Top-Selling Products & Category Sales Analytics -->
+            <Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto" RowSpacing="16">
+
+                <!-- Top-Selling Products -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Top-Selling Products" Style="{StaticResource SubHeadingLabel}" />
+
+                        <Label Text="No sales recorded for this period yet. Complete an order in POS to see product rankings."
+                               Style="{StaticResource MutedLabel}"
+                               IsVisible="{Binding HasTopProducts, Converter={StaticResource InverseBoolConverter}}" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding TopProducts}" Spacing="10"
+                                             IsVisible="{Binding HasTopProducts}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="helpers:TopProductStat">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Name}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                            <Label Grid.Column="1" Text="{Binding Revenue, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" FontSize="14" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <ProgressBar Progress="{Binding BarRatio}" ProgressColor="{StaticResource PrimaryBlack}" VerticalOptions="Center" />
+                                            <Label Grid.Column="1" Text="{Binding QuantitySold, StringFormat='{0} sold'}" Style="{StaticResource MutedLabel}" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Sales by Category -->
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Sales by Category" Style="{StaticResource SubHeadingLabel}" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Categories}" Spacing="10">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="helpers:CategoryStat">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Category}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                            <Label Grid.Column="1" Text="{Binding Revenue, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" FontSize="14" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <ProgressBar Progress="{Binding BarRatio}" ProgressColor="{StaticResource PrimaryBlack}" VerticalOptions="Center" />
+                                            <Label Grid.Column="1" Text="{Binding SummaryText}" Style="{StaticResource MutedLabel}" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Recent Transactions Snapshot -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Recent Transactions" Style="{StaticResource SubHeadingLabel}" />
+
+                    <Label Text="No transactions in this period."
+                           Style="{StaticResource MutedLabel}"
+                           IsVisible="{Binding HasRecentOrders, Converter={StaticResource InverseBoolConverter}}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentOrders}" Spacing="8"
+                                         IsVisible="{Binding HasRecentOrders}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:Order">
+                                <Border Style="{StaticResource CreamCard}" Padding="12,10">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="2">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding ReceiptNumber}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                                <Border Style="{StaticResource PaidBadge}" IsVisible="{Binding IsNotVoided}" Padding="8,2">
+                                                    <Label Text="{Binding PaymentMethod}" Style="{StaticResource BadgeLabel}" FontSize="10" />
+                                                </Border>
+                                                <Border Style="{StaticResource OutOfStockBadge}" IsVisible="{Binding IsVoided}" Padding="8,2">
+                                                    <Label Text="VOIDED" Style="{StaticResource BadgeLabel}" FontSize="10" />
+                                                </Border>
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding ItemsSummary}" Style="{StaticResource MutedLabel}" MaxLines="1" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding CreatedDisplay}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding TotalAmount, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

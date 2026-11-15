@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.ReceiptPage"
+             x:DataType="vm:ReceiptViewModel"
+             Title="{Binding Title2}"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource PureWhite}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="14" MaximumWidthRequest="560" HorizontalOptions="Center">
+            <Border Style="{StaticResource ReceiptPreview}">
+                <ScrollView Orientation="Horizontal">
+                    <Label Text="{Binding PreviewText}" Style="{StaticResource ReceiptLabel}" FontSize="12" LineBreakMode="NoWrap">
+                        <Label.FontFamily>
+                            <OnPlatform x:TypeArguments="x:String" Default="Courier New">
+                                <On Platform="Android" Value="monospace" />
+                                <On Platform="WinUI" Value="Consolas" />
+                            </OnPlatform>
+                        </Label.FontFamily>
+                    </Label>
+                </ScrollView>
+            </Border>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource AlertSuccess}" FontSize="13" HorizontalOptions="Center"
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+            <Button Text="Print (Bluetooth)" Style="{StaticResource PrimaryButton}" Command="{Binding PrintCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Text="Share PDF" Style="{StaticResource SecondaryButton}" Command="{Binding SharePdfCommand}" />
+                <Button Grid.Column="1" Text="Share text" Style="{StaticResource SecondaryButton}" Command="{Binding ShareTextCommand}" />
+            </Grid>
+            <Button Text="Done" Style="{StaticResource SecondaryButton}" Command="{Binding DoneCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

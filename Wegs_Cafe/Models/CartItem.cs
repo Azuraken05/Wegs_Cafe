@@ -1,11 +1,17 @@
-﻿namespace Wegs_Cafe.Models;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
-/// <summary>Item in the local cart (kept in memory, not saved to Firebase).</summary>
-public class CartItem
+namespace Wegs_Cafe.Models;
+
+/// <summary>Local-only cart line (never written to Firebase directly; becomes an OrderItem).</summary>
+public partial class CartItem : ObservableObject
 {
-    public Product Item { get; set; } = new();
-    public int Quantity { get; set; } = 1;
-    public string? Notes { get; set; }
+    public Product Product { get; init; } = new();
 
-    public decimal Subtotal => Item.Price * Quantity;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(Subtotal))]
+    private int _qty = 1;
+
+    [ObservableProperty]
+    private string _notes = string.Empty;
+
+    public decimal Subtotal => Product.Price * Qty;
 }

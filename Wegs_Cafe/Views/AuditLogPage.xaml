@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.AuditLogPage"
+             x:DataType="vm:AuditLogViewModel"
+             Title="Audit Logs"
+             BackgroundColor="{StaticResource PureWhite}">
+    <Grid RowDefinitions="Auto,*" Padding="20" RowSpacing="14">
+        <VerticalStackLayout Spacing="12">
+            <Label Text="Audit Logs" Style="{StaticResource HeadingLabel}" />
+            <Border Style="{StaticResource SearchBorder}">
+                <Entry Style="{StaticResource BareEntry}" Placeholder="Search action, person or details" Text="{Binding SearchText}" />
+            </Border>
+            <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="No activity recorded yet." Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:AuditLog">
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <VerticalStackLayout Spacing="3">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{Binding Action}" Style="{StaticResource PriceLabel}" />
+                                <Label Grid.Column="1" Text="{Binding TimestampDisplay}" Style="{StaticResource MutedLabel}" />
+                            </Grid>
+                            <Label Text="{Binding ActorDisplay}" Style="{StaticResource BodyLabel}" FontSize="13" />
+                            <Label Text="{Binding Details}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

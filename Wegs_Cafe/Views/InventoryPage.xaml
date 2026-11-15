@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.InventoryPage"
+             x:DataType="vm:InventoryViewModel"
+             Title="Inventory"
+             BackgroundColor="{StaticResource PureWhite}">
+    <Grid RowDefinitions="Auto,*" Padding="20" RowSpacing="14">
+        <VerticalStackLayout Spacing="12">
+            <Label Text="Inventory" Style="{StaticResource HeadingLabel}" />
+            <Border Style="{StaticResource SearchBorder}">
+                <Entry Style="{StaticResource BareEntry}" Placeholder="Search name or SKU" Text="{Binding SearchText}" />
+            </Border>
+
+            <!-- Status filter pills -->
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="All" Style="{StaticResource PillButton}" Command="{Binding SetFilterCommand}" CommandParameter="All">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedFilter}" Value="All">
+                            <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                            <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="{Binding LowCount, StringFormat='Low Stock ({0})'}" Style="{StaticResource PillButton}" Command="{Binding SetFilterCommand}" CommandParameter="Low Stock">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedFilter}" Value="Low Stock">
+                            <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                            <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="{Binding OutCount, StringFormat='Out of Stock ({0})'}" Style="{StaticResource PillButton}" Command="{Binding SetFilterCommand}" CommandParameter="Out of Stock">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedFilter}" Value="Out of Stock">
+                            <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                            <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </HorizontalStackLayout>
+
+            <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="Nothing to show." Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="{OnIdiom Phone=1, Tablet=2}" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProductRow">
+                    <Border Style="{StaticResource CreamCard}" Padding="14">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                                <Label Text="{Binding Product.Name}" Style="{StaticResource SubHeadingLabel}" FontSize="16" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Product.Sku}" Style="{StaticResource MutedLabel}" />
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="{Binding Product.StockText}" Style="{StaticResource PriceLabel}" VerticalOptions="Center" />
+                                    <Border Style="{StaticResource OutOfStockBadge}" IsVisible="{Binding Product.IsOutOfStock}">
+                                        <Label Text="Out of stock" Style="{StaticResource BadgeLabel}" />
+                                    </Border>
+                                    <Border Style="{StaticResource LowStockBadge}" IsVisible="{Binding Product.IsLowStock}">
+                                        <Label Text="Low stock" Style="{StaticResource BadgeLabel}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding Product.LowStockThreshold, StringFormat='Alert at {0} or less'}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center" IsVisible="{Binding CanEdit}">
+                                <Button Text="+ Restock" Style="{StaticResource PrimaryButton}" HeightRequest="38" FontSize="12" Clicked="OnRestockClicked" />
+                                <Button Text="Adjust stock" Style="{StaticResource SecondaryButton}" HeightRequest="38" FontSize="12" Clicked="OnAdjustClicked" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

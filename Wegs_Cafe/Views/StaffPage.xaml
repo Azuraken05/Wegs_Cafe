@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.StaffPage"
+             x:DataType="vm:StaffViewModel"
+             Title="Staff"
+             BackgroundColor="{StaticResource PureWhite}">
+    <ScrollView>
+        <Grid Padding="20" ColumnSpacing="20" RowSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="{OnIdiom Phone=0, Tablet=*, Default=*}" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Accounts list -->
+            <VerticalStackLayout Grid.Column="0" Spacing="12">
+                <Label Text="Team accounts" Style="{StaticResource HeadingLabel}" />
+                <CollectionView ItemsSource="{Binding Users}" SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:AppUser">
+                            <Border Style="{StaticResource CreamCard}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding FullName}" Style="{StaticResource SubHeadingLabel}" />
+                                        <Label Text="{Binding Username, StringFormat='@{0}'}" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding RoleDisplay}" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                                        <Label Text="Disabled" TextColor="{StaticResource AlertDanger}" FontSize="12"
+                                               IsVisible="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="Enable / Disable" Style="{StaticResource SecondaryButton}"
+                                            HeightRequest="40" FontSize="12" VerticalOptions="Center"
+                                            IsVisible="{Binding CanBeDisabled}" Clicked="OnToggleClicked" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <!-- New account form (right column on tablet, below list on phone) -->
+            <Border x:Name="FormCard" Style="{StaticResource Card}" Grid.Column="1" VerticalOptions="Start">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Add manager / staff" Style="{StaticResource SubHeadingLabel}" />
+
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="Full name" Text="{Binding FullName}" />
+                    </Border>
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="Username" Text="{Binding Username}" Keyboard="Plain" />
+                    </Border>
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="Password (min 6)" IsPassword="True" Text="{Binding Password}" />
+                    </Border>
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="Quick-switch PIN (4-6 digits)" IsPassword="True"
+                               Keyboard="Numeric" MaxLength="6" Text="{Binding Pin}" />
+                    </Border>
+                    <Border Style="{StaticResource InputBorder}">
+                        <Picker Title="Role" TextColor="{StaticResource PrimaryBlack}" FontFamily="Body"
+                                ItemsSource="{Binding AssignableRoles}" SelectedItem="{Binding SelectedRole}" />
+                    </Border>
+
+                    <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                           IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+                    <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource AlertSuccess}" FontSize="13"
+                           IsVisible="{Binding SuccessMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                    <Button Text="Create account" Style="{StaticResource PrimaryButton}"
+                            Command="{Binding CreateCommand}" IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+</ContentPage>

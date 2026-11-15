@@ -1,32 +1,104 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <Shell
     x:Class="Wegs_Cafe.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:Wegs_Cafe"
     xmlns:views="clr-namespace:Wegs_Cafe.Views"
-    Title="Wegs_Cafe">
+    Title="Weg's Cafe"
+    FlyoutBehavior="Flyout"
+    FlyoutWidth="280"
+    FlyoutBackgroundColor="{StaticResource PrimaryBlack}">
 
-    <TabBar>
-        <Tab Title="Home">
-            <ShellContent ContentTemplate="{DataTemplate views:HomePage}" Route="HomePage" />
-        </Tab>
+    <!-- Monochrome Sidebar Flyout Item Styling -->
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Grid Padding="16,4">
+                <Border x:Name="ItemBorder"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 12"
+                        Padding="14,12"
+                        BackgroundColor="Transparent">
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroupList>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="Transparent" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Selected">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateGroupList>
+                    </VisualStateManager.VisualStateGroups>
+                    <Label Text="{Binding Title}"
+                           TextColor="{StaticResource PureWhite}"
+                           FontFamily="Heading"
+                           FontSize="15"
+                           VerticalOptions="Center" />
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
 
-        <Tab Title="Menu">
-            <ShellContent ContentTemplate="{DataTemplate views:MenuPage}" Route="MenuPage" />
-        </Tab>
+    <Shell.MenuItemTemplate>
+        <DataTemplate>
+            <Grid Padding="16,12">
+                <Border Stroke="{StaticResource AlertDanger}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        Padding="14,12"
+                        BackgroundColor="{StaticResource CharcoalSurface}">
+                    <Label Text="{Binding Text}"
+                           TextColor="{StaticResource AlertDanger}"
+                           FontFamily="Heading"
+                           FontSize="15"
+                           VerticalOptions="Center" />
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Shell.MenuItemTemplate>
 
-        <Tab Title="About">
-            <ShellContent ContentTemplate="{DataTemplate views:AboutPage}" Route="AboutPage" />
-        </Tab>
+    <!-- Separate FlyoutItems: each creates a top-level entry in the Hamburger Sidebar
+         with NO bottom tab bar, and Dashboard is first. -->
+    <FlyoutItem x:Name="DashboardTab" Title="📊  Dashboard" Route="dashboard">
+        <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" />
+    </FlyoutItem>
 
-        <Tab Title="Contact">
-            <ShellContent ContentTemplate="{DataTemplate views:ContactPage}" Route="ContactPage" />
-        </Tab>
+    <FlyoutItem x:Name="PosTab" Title="☕  POS Cashier" Route="pos">
+        <ShellContent ContentTemplate="{DataTemplate views:PosPage}" />
+    </FlyoutItem>
 
-        <Tab Title="Login">
-            <ShellContent ContentTemplate="{DataTemplate views:LoginPage}" Route="LoginPage" />
-        </Tab>
-    </TabBar>
+    <FlyoutItem x:Name="OrdersTab" Title="🧾  Order History" Route="orders">
+        <ShellContent ContentTemplate="{DataTemplate views:OrderHistoryPage}" />
+    </FlyoutItem>
 
+    <FlyoutItem x:Name="ShiftTab" Title="💵  Shift (X/Z Reading)" Route="shift">
+        <ShellContent ContentTemplate="{DataTemplate views:ShiftPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="ProductsTab" Title="🥐  Products" Route="products">
+        <ShellContent ContentTemplate="{DataTemplate views:ProductsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="InventoryTab" Title="📦  Inventory" Route="inventory">
+        <ShellContent ContentTemplate="{DataTemplate views:InventoryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="StaffTab" Title="👥  Staff Management" Route="staff">
+        <ShellContent ContentTemplate="{DataTemplate views:StaffPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="AuditTab" Title="🛡️  Audit Logs" Route="audit">
+        <ShellContent ContentTemplate="{DataTemplate views:AuditLogPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="PrinterTab" Title="🖨️  Printer Settings" Route="printer">
+        <ShellContent ContentTemplate="{DataTemplate views:PrinterSettingsPage}" />
+    </FlyoutItem>
+
+    <MenuItem Text="🚪  Log out" Clicked="OnLogoutClicked" />
 </Shell>

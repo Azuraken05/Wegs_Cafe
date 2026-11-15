@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.PaymentPage"
+             x:DataType="vm:PaymentViewModel"
+             Title="Payment"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource PureWhite}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="14" MaximumWidthRequest="560" HorizontalOptions="Center">
+
+            <Border Style="{StaticResource BlackCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{Binding OrderSummary}" TextColor="{StaticResource BorderGray}" FontSize="13" />
+                    <Label Text="Amount due" TextColor="{StaticResource BorderGray}" FontSize="13" />
+                    <Label Text="{Binding Total, StringFormat='₱{0:N2}'}" TextColor="{StaticResource PureWhite}" FontFamily="Heading" FontSize="36" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Subtotal" TextColor="{StaticResource BorderGray}" FontSize="13" />
+                        <Label Grid.Column="1" Text="{Binding Subtotal, StringFormat='₱{0:N2}'}" TextColor="{StaticResource BorderGray}" FontSize="13" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="6" IsVisible="{Binding ShowDiscount}">
+                <Label Text="Discount (₱) — optional" Style="{StaticResource MutedLabel}" />
+                <Border Style="{StaticResource InputBorder}"><Entry Style="{StaticResource BareEntry}" Keyboard="Numeric" Placeholder="0" Text="{Binding DiscountText}" /></Border>
+            </VerticalStackLayout>
+
+            <Label Text="Payment method" Style="{StaticResource SubHeadingLabel}" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Text="Cash" Style="{StaticResource PillButton}" Command="{Binding SelectMethodCommand}" CommandParameter="Cash">
+                    <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsCash}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" /><Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                    </DataTrigger></Button.Triggers>
+                </Button>
+                <Button Grid.Column="1" Text="GCash" Style="{StaticResource PillButton}" Command="{Binding SelectMethodCommand}" CommandParameter="GCash">
+                    <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsGCash}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" /><Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                    </DataTrigger></Button.Triggers>
+                </Button>
+                <Button Grid.Column="2" Text="Card" Style="{StaticResource PillButton}" Command="{Binding SelectMethodCommand}" CommandParameter="Credit Card">
+                    <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsCard}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" /><Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                    </DataTrigger></Button.Triggers>
+                </Button>
+            </Grid>
+
+            <!-- CASH -->
+            <Border Style="{StaticResource CreamCard}" IsVisible="{Binding IsCash}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Cash received" Style="{StaticResource MutedLabel}" />
+                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
+                        <Button Text="Exact" Style="{StaticResource SecondaryButton}" HeightRequest="42" FontSize="12" Padding="0" Command="{Binding QuickCashCommand}" CommandParameter="exact" />
+                        <Button Grid.Column="1" Text="₱100" Style="{StaticResource SecondaryButton}" HeightRequest="42" FontSize="12" Padding="0" Command="{Binding QuickCashCommand}" CommandParameter="100" />
+                        <Button Grid.Column="2" Text="₱200" Style="{StaticResource SecondaryButton}" HeightRequest="42" FontSize="12" Padding="0" Command="{Binding QuickCashCommand}" CommandParameter="200" />
+                        <Button Grid.Column="3" Text="₱500" Style="{StaticResource SecondaryButton}" HeightRequest="42" FontSize="12" Padding="0" Command="{Binding QuickCashCommand}" CommandParameter="500" />
+                        <Button Grid.Column="4" Text="₱1000" Style="{StaticResource SecondaryButton}" HeightRequest="42" FontSize="12" Padding="0" Command="{Binding QuickCashCommand}" CommandParameter="1000" />
+                    </Grid>
+                    <Border Style="{StaticResource InputBorder}" BackgroundColor="{StaticResource PureWhite}">
+                        <Entry Style="{StaticResource BareEntry}" Keyboard="Numeric" Placeholder="Amount tendered" Text="{Binding TenderedText}" />
+                    </Border>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Change due" Style="{StaticResource SubHeadingLabel}" />
+                        <Label Grid.Column="1" Text="{Binding ChangeDue, StringFormat='₱{0:N2}'}" Style="{StaticResource HeadingLabel}" FontSize="22" />
+                    </Grid>
+                    <Label Text="Cash received is less than the total." TextColor="{StaticResource AlertDanger}" FontSize="12" IsVisible="{Binding CashShort}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- GCASH -->
+            <Border Style="{StaticResource CreamCard}" IsVisible="{Binding IsGCash}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Customer pays the exact amount to the store GCash, then enter the reference number from their receipt screen." Style="{StaticResource MutedLabel}" />
+                    <Label Text="GCash reference number (required)" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                    <Border Style="{StaticResource InputBorder}" BackgroundColor="{StaticResource PureWhite}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="e.g. 1234 567 890123" Text="{Binding Reference}" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- CARD -->
+            <Border Style="{StaticResource CreamCard}" IsVisible="{Binding IsCard}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Approval / trace number (required)" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                    <Border Style="{StaticResource InputBorder}" BackgroundColor="{StaticResource PureWhite}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="Terminal approval code" Text="{Binding Reference}" />
+                    </Border>
+                    <Label Text="Last 4 digits of card (required)" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                    <Border Style="{StaticResource InputBorder}" BackgroundColor="{StaticResource PureWhite}">
+                        <Entry Style="{StaticResource BareEntry}" Placeholder="1234" Keyboard="Numeric" MaxLength="4" Text="{Binding CardLast4}" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+
+            <Button Text="Confirm payment" Style="{StaticResource PrimaryButton}" Command="{Binding ConfirmCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Back to order" Style="{StaticResource SecondaryButton}" Command="{Binding CancelCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

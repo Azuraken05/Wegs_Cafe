@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.ProductsPage"
+             x:DataType="vm:ProductsViewModel"
+             Title="Products"
+             BackgroundColor="{StaticResource PureWhite}">
+    <Grid RowDefinitions="Auto,*" Padding="20" RowSpacing="14">
+        <VerticalStackLayout Spacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="Products" Style="{StaticResource HeadingLabel}" VerticalOptions="Center" />
+                <Button Grid.Column="1" Text="+ New product" Style="{StaticResource PrimaryButton}" HeightRequest="44"
+                        Command="{Binding AddCommand}" IsVisible="{Binding CanManage}" />
+            </Grid>
+            <Border Style="{StaticResource SearchBorder}">
+                <Entry Style="{StaticResource BareEntry}" Placeholder="Search name, SKU or category" Text="{Binding SearchText}" />
+            </Border>
+            <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource AlertDanger}" FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="No products yet." Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="{OnIdiom Phone=1, Tablet=2}" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProductRow">
+                    <Border Style="{StaticResource CreamCard}" Padding="12">
+                        <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12">
+                            <Border WidthRequest="64" HeightRequest="64" BackgroundColor="{StaticResource PureWhite}"
+                                    Stroke="{StaticResource BorderGray}" StrokeShape="RoundRectangle 12" Padding="0">
+                                <Grid>
+                                    <Label Text="☕" FontSize="26" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    <Image Source="{Binding Product.ImageUrl, Converter={StaticResource ImagePathConverter}}" Aspect="AspectFill" />
+                                </Grid>
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Product.Name}" Style="{StaticResource SubHeadingLabel}" FontSize="16" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Product.SkuAndCategory}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding Product.Price, StringFormat='₱{0:N2}'}" Style="{StaticResource PriceLabel}" />
+                                <HorizontalStackLayout Spacing="6">
+                                    <Border Style="{StaticResource OutOfStockBadge}" IsVisible="{Binding Product.IsOutOfStock}">
+                                        <Label Text="Out of stock" Style="{StaticResource BadgeLabel}" />
+                                    </Border>
+                                    <Border Style="{StaticResource LowStockBadge}" IsVisible="{Binding Product.IsLowStock}">
+                                        <Label Text="Low stock" Style="{StaticResource BadgeLabel}" />
+                                    </Border>
+                                    <Label Text="Hidden from POS" Style="{StaticResource MutedLabel}" VerticalOptions="Center"
+                                           IsVisible="{Binding Product.IsAvailable, Converter={StaticResource InverseBoolConverter}}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="2" Spacing="6" VerticalOptions="Center" IsVisible="{Binding CanEdit}">
+                                <Button Text="Edit" Style="{StaticResource SecondaryButton}" HeightRequest="36" FontSize="12" Clicked="OnEditClicked" />
+                                <Button Text="Delete" Style="{StaticResource DangerButton}" HeightRequest="36" FontSize="12" Clicked="OnDeleteClicked" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
