@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             xmlns:helpers="clr-namespace:Wegs_Cafe.Helpers"
+             x:Class="Wegs_Cafe.Views.SalesAnalyticsDashboardPage"
+             x:DataType="vm:SalesAnalyticsDashboardViewModel"
+             x:Name="DashboardRootPage"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <VerticalStackLayout x:Name="DashboardContentContainer" Padding="20" Spacing="18">
+
+            <!-- Top Header Bar + Timeframe Selector + Owner Report Export Buttons -->
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="14">
+
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                        <Label Text="SALES &amp; ANALYTICS DASHBOARD"
+                               FontFamily="QuicksandBold"
+                               FontSize="22"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="{Binding ActiveUserGreeting}"
+                               Style="{StaticResource MutedCaption}"
+                               FontSize="13" />
+                        <Label Text="{Binding TimeframeHeaderTitle}"
+                               FontFamily="InterSemiBold"
+                               FontSize="13"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                    </VerticalStackLayout>
+
+                    <!-- Timeframe Selector Pills (Day / Week / Month) -->
+                    <HorizontalStackLayout Grid.Row="0" Grid.Column="1" Spacing="8" VerticalOptions="Start">
+                        <Button Text="Day"
+                                HeightRequest="40"
+                                Padding="16,0"
+                                CornerRadius="20"
+                                FontFamily="InterSemiBold"
+                                Command="{Binding SelectTimeframeCommand}"
+                                CommandParameter="day">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDayTimeframe}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDayTimeframe}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="Week"
+                                HeightRequest="40"
+                                Padding="16,0"
+                                CornerRadius="20"
+                                FontFamily="InterSemiBold"
+                                Command="{Binding SelectTimeframeCommand}"
+                                CommandParameter="week">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsWeekTimeframe}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsWeekTimeframe}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="Month"
+                                HeightRequest="40"
+                                Padding="16,0"
+                                CornerRadius="20"
+                                FontFamily="InterSemiBold"
+                                Command="{Binding SelectTimeframeCommand}"
+                                CommandParameter="month">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsMonthTimeframe}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsMonthTimeframe}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </HorizontalStackLayout>
+
+                    <!-- Action Bar: Open POS + Owner Excel / CSV Export -->
+                    <FlexLayout Grid.Row="1" Grid.ColumnSpan="2"
+                                Wrap="Wrap"
+                                AlignItems="Center"
+                                JustifyContent="SpaceBetween">
+                        <HorizontalStackLayout Spacing="10" Margin="0,4">
+                            <Button Text="Open Point of Sale Terminal"
+                                    Style="{StaticResource PrimaryBlackButton}"
+                                    HeightRequest="42"
+                                    Command="{Binding OpenPointOfSaleCommand}" />
+                            <Button Text="Refresh Analytics"
+                                    Style="{StaticResource OutlineSecondaryButton}"
+                                    HeightRequest="42"
+                                    Command="{Binding LoadDashboardAnalyticsCommand}" />
+                        </HorizontalStackLayout>
+
+                        <HorizontalStackLayout Spacing="10" Margin="0,4" IsVisible="{Binding IsOwnerAccount}">
+                            <Button Text="Export Sales Report (.xlsx)"
+                                    Style="{StaticResource SuccessButton}"
+                                    HeightRequest="42"
+                                    ImageSource="file_download.png"
+                                    Command="{Binding ExportSalesReportExcelCommand}" />
+                            <Button Text="Export Sales Report (.csv)"
+                                    Style="{StaticResource PrimaryBlackButton}"
+                                    HeightRequest="42"
+                                    ImageSource="file_download.png"
+                                    Command="{Binding ExportSalesReportCsvCommand}" />
+                        </HorizontalStackLayout>
+                    </FlexLayout>
+
+                </Grid>
+            </Border>
+
+            <!-- Low-Stock Notification Panel (Slides down & pulses when any product is at/below threshold) -->
+            <Border x:Name="LowStockNotificationBanner"
+                    BackgroundColor="#FFFBEB"
+                    Stroke="{StaticResource StatusWarning}"
+                    StrokeThickness="1.5"
+                    Padding="18"
+                    IsVisible="{Binding HasInventoryAlerts}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Grid.Column="0"
+                                BackgroundColor="{StaticResource StatusWarning}"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                StrokeThickness="0"
+                                VerticalOptions="Center">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="18" /></Border.StrokeShape>
+                            <Image Source="warning.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="{Binding InventoryAlertCount, StringFormat='LOW-STOCK NOTIFICATION PANEL ({0} Items Require Attention)'}"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="16"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Items below or at their low-stock threshold are listed below. Tap 'Restock Item' to replenish immediately."
+                                   Style="{StaticResource MutedCaption}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="2"
+                                Text="Manage Inventory"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                HeightRequest="38"
+                                Padding="14,0"
+                                Command="{Binding OpenInventoryManagementCommand}" />
+                    </Grid>
+
+                    <CollectionView ItemsSource="{Binding LowStockAlertProducts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Product">
+                                <Border BackgroundColor="{StaticResource PureWhite}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        StrokeThickness="1"
+                                        Padding="14,10">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding ProductName}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="14"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding StockDisplayText, StringFormat='Current Stock: {0}'}"
+                                                   Style="{StaticResource MutedCaption}" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="1"
+                                                BackgroundColor="{StaticResource StatusWarning}"
+                                                StrokeThickness="0"
+                                                Padding="10,4"
+                                                VerticalOptions="Center">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="10" />
+                                            </Border.StrokeShape>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsOutOfStock}" Value="True">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Label Text="{Binding StockStatusText}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource PureWhite}" />
+                                        </Border>
+
+                                        <Button Grid.Column="2"
+                                                Text="Restock Item"
+                                                Style="{StaticResource PrimaryBlackButton}"
+                                                HeightRequest="36"
+                                                Padding="14,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference DashboardRootPage}, Path=BindingContext.RestockItemCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- 4 Executive KPI Cards -->
+            <Grid ColumnDefinitions="{OnIdiom Phone='*,*', Tablet='*,*,*,*', Desktop='*,*,*,*'}"
+                  RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
+                  ColumnSpacing="14"
+                  RowSpacing="14">
+
+                <!-- KPI 1: Gross Sales Revenue -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource DarkCardSurface}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="GROSS SALES REVENUE"
+                               FontFamily="InterSemiBold"
+                               FontSize="11"
+                               TextColor="#A1A1AA" />
+                        <Label Text="{Binding GrossSalesRevenue, Converter={StaticResource CurrencyConverter}}"
+                               FontFamily="QuicksandBold"
+                               FontSize="26"
+                               TextColor="{StaticResource PureWhite}" />
+                        <Label Text="{Binding TotalItemsSold, StringFormat='{0} total items sold'}"
+                               FontFamily="InterRegular"
+                               FontSize="12"
+                               TextColor="#D4D4D8" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- KPI 2: Estimated Gross Profit -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="ESTIMATED GROSS PROFIT"
+                               FontFamily="InterSemiBold"
+                               FontSize="11"
+                               TextColor="{StaticResource MutedText}" />
+                        <Label Text="{Binding EstimatedGrossProfit, Converter={StaticResource CurrencyConverter}}"
+                               FontFamily="QuicksandBold"
+                               FontSize="26"
+                               TextColor="{StaticResource StatusSuccess}" />
+                        <Label Text="{Binding ProfitMarginText}"
+                               Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- KPI 3: Completed Orders -->
+                <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                        Grid.Column="{OnIdiom Phone=0, Tablet=2, Desktop=2}"
+                        Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="COMPLETED ORDERS"
+                               FontFamily="InterSemiBold"
+                               FontSize="11"
+                               TextColor="{StaticResource MutedText}" />
+                        <Label Text="{Binding CompletedOrderCount}"
+                               FontFamily="QuicksandBold"
+                               FontSize="26"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="{Binding VoidedOrderCount, StringFormat='{0} voided transactions'}"
+                               Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- KPI 4: Average Order Ticket -->
+                <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                        Grid.Column="{OnIdiom Phone=1, Tablet=3, Desktop=3}"
+                        Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="AVERAGE ORDER TICKET"
+                               FontFamily="InterSemiBold"
+                               FontSize="11"
+                               TextColor="{StaticResource MutedText}" />
+                        <Label Text="{Binding AverageOrderTicket, Converter={StaticResource CurrencyConverter}}"
+                               FontFamily="QuicksandBold"
+                               FontSize="26"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Per completed transaction"
+                               Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Sales Revenue Bar & Trend Graph -->
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="SALES REVENUE TREND GRAPH"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="17"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Revenue bars (PHP) with trend trajectory across the selected timeframe"
+                                   Style="{StaticResource MutedCaption}" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1"
+                                BackgroundColor="{StaticResource OffWhiteCream}"
+                                Stroke="{StaticResource BorderGray}"
+                                Padding="12,6">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label Text="{Binding GrossSalesRevenue, Converter={StaticResource CurrencyConverter}}"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="14"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Border>
+                    </Grid>
+
+                    <GraphicsView x:Name="SalesTrendChartView"
+                                  Drawable="{Binding SalesTrendChartDrawable}"
+                                  HeightRequest="250"
+                                  HorizontalOptions="Fill" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Payment Method Breakdown + Top Selling Products -->
+            <Grid ColumnDefinitions="{OnIdiom Phone='*', Tablet='*,*', Desktop='*,*'}"
+                  RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
+                  ColumnSpacing="16"
+                  RowSpacing="16">
+
+                <!-- Payment Method Split -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="20">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="PAYMENT METHOD REVENUE SPLIT"
+                               FontFamily="QuicksandBold"
+                               FontSize="16"
+                               TextColor="{StaticResource PrimaryBlack}" />
+
+                        <GraphicsView x:Name="PaymentSplitChartView"
+                                      Drawable="{Binding PaymentMethodChartDrawable}"
+                                      HeightRequest="68"
+                                      HorizontalOptions="Fill" />
+
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource OffWhiteCream}" Stroke="{StaticResource BorderGray}" Padding="12,10">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Cash" Style="{StaticResource MutedCaption}" />
+                                    <Label Text="{Binding CashSalesRevenue, Converter={StaticResource CurrencyConverter}}"
+                                           FontFamily="QuicksandBold" FontSize="15" TextColor="{StaticResource PrimaryBlack}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="1" BackgroundColor="{StaticResource OffWhiteCream}" Stroke="{StaticResource BorderGray}" Padding="12,10">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="GCash" Style="{StaticResource MutedCaption}" />
+                                    <Label Text="{Binding GcashSalesRevenue, Converter={StaticResource CurrencyConverter}}"
+                                           FontFamily="QuicksandBold" FontSize="15" TextColor="{StaticResource StatusSuccess}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="2" BackgroundColor="{StaticResource OffWhiteCream}" Stroke="{StaticResource BorderGray}" Padding="12,10">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Credit Card" Style="{StaticResource MutedCaption}" />
+                                    <Label Text="{Binding CreditCardSalesRevenue, Converter={StaticResource CurrencyConverter}}"
+                                           FontFamily="QuicksandBold" FontSize="15" TextColor="{StaticResource StatusWarning}" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="{StaticResource BorderGray}" />
+
+                        <Label Text="CATEGORY REVENUE BREAKDOWN"
+                               FontFamily="QuicksandBold"
+                               FontSize="14"
+                               TextColor="{StaticResource PrimaryBlack}" />
+
+                        <CollectionView ItemsSource="{Binding CategoryBreakdown}" SelectionMode="None">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="helpers:CategoryPerformanceSummary">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                            <Label Grid.Column="0" Text="{Binding Category}" FontFamily="InterSemiBold" FontSize="13" TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Grid.Column="1" Text="{Binding UnitsSold, StringFormat='{0} sold'}" Style="{StaticResource MutedCaption}" />
+                                            <Label Grid.Column="2" Text="{Binding Revenue, Converter={StaticResource CurrencyConverter}}" FontFamily="QuicksandBold" FontSize="13" TextColor="{StaticResource PrimaryBlack}" />
+                                        </Grid>
+                                        <ProgressBar Progress="{Binding ShareRatio}" ProgressColor="{StaticResource PrimaryBlack}" BackgroundColor="{StaticResource OffWhiteCream}" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Top Selling Products -->
+                <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                        Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
+                        Style="{StaticResource CardSurface}"
+                        Padding="20">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="TOP-SELLING MENU ITEMS"
+                               FontFamily="QuicksandBold"
+                               FontSize="16"
+                               TextColor="{StaticResource PrimaryBlack}" />
+
+                        <CollectionView ItemsSource="{Binding TopSellingProducts}" SelectionMode="None">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="helpers:TopSellingProductRank">
+                                    <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                            Stroke="{StaticResource BorderGray}"
+                                            Padding="12,10">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12" />
+                                        </Border.StrokeShape>
+                                        <Grid ColumnDefinitions="32,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Border Grid.Column="0"
+                                                    BackgroundColor="{StaticResource PrimaryBlack}"
+                                                    WidthRequest="28"
+                                                    HeightRequest="28"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="14" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding Rank}"
+                                                       FontFamily="QuicksandBold"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource PureWhite}"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center" />
+                                            </Border>
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding ProductName}"
+                                                       FontFamily="InterSemiBold"
+                                                       FontSize="13"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
+                                                <Label Text="{Binding QuantitySold}"
+                                                       Style="{StaticResource MutedCaption}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="2"
+                                                   Text="{Binding Revenue, Converter={StaticResource CurrencyConverter}}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="14"
+                                                   TextColor="{StaticResource PrimaryBlack}"
+                                                   VerticalOptions="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Recent Orders Table -->
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="RECENT POS TRANSACTIONS"
+                           FontFamily="QuicksandBold"
+                           FontSize="16"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <CollectionView ItemsSource="{Binding RecentOrders}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Order">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,10">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding ReceiptNumber}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="14"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding ItemsSummary}"
+                                                   Style="{StaticResource MutedCaption}"
+                                                   LineBreakMode="TailTruncation" />
+                                        </VerticalStackLayout>
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                                            <Label Text="{Binding PaymentMethod}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource PrimaryBlack}"
+                                                   HorizontalOptions="End" />
+                                            <Label Text="{Binding OrderStatus}"
+                                                   Style="{StaticResource MutedCaption}"
+                                                   HorizontalOptions="End" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="2"
+                                               Text="{Binding TotalAmount, Converter={StaticResource CurrencyConverter}}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="15"
+                                               TextColor="{StaticResource PrimaryBlack}"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

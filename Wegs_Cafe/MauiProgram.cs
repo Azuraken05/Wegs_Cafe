@@ -1,46 +1,83 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using Wegs_Cafe.Services;
+using Wegs_Cafe.ViewModels;
 using Wegs_Cafe.Views;
 
-namespace Wegs_Cafe
+namespace Wegs_Cafe;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .UseSkiaSharp()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Semibold.ttf", "QuicksandBold");
+                fonts.AddFont("OpenSans-Regular.ttf", "InterRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "InterSemiBold");
+                fonts.AddFont("OpenSans-Semibold.ttf", "Heading");
+                fonts.AddFont("OpenSans-Regular.ttf", "Body");
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            });
 
 #if DEBUG
-
-            builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
-            // ---------- Services ----------
-            builder.Services.AddSingleton<FirebaseService>();
-            builder.Services.AddSingleton<AuthService>();
-            builder.Services.AddSingleton<MenuService>();
-            builder.Services.AddSingleton<OrderService>();
-            builder.Services.AddSingleton<CartService>();
 
-            // ---------- ViewModels ----------
-            // Register here as you create them, e.g.:
-            // builder.Services.AddTransient<ViewModels.MenuViewModel>();
+        // Core Services (SQLite Offline Cache + Firebase + Cloudinary)
+        builder.Services.AddSingleton<LocalDatabaseService>();
+        builder.Services.AddSingleton<SessionService>();
+        builder.Services.AddSingleton<FirebaseService>();
+        builder.Services.AddSingleton<ApplicationNavigationService>();
+        builder.Services.AddSingleton<IAuditTrailService, AuditTrailService>();
 
-            // ---------- Pages ----------
-            // Shell resolves registered pages from DI, so constructor injection works.
-            builder.Services.AddTransient<HomePage>();
-            builder.Services.AddTransient<MenuPage>();
-            builder.Services.AddTransient<AboutPage>();
-            builder.Services.AddTransient<ContactPage>();
-            builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddSingleton<UserAccountStore>();
+        builder.Services.AddSingleton<IAuthenticationService>(sp => sp.GetRequiredService<UserAccountStore>());
+        builder.Services.AddSingleton<IUserManagementService>(sp => sp.GetRequiredService<UserAccountStore>());
 
-            return builder.Build();
-        }
+        builder.Services.AddSingleton<IImageStorageService, CloudinaryProductImageStorageService>();
+
+        builder.Services.AddSingleton<CatalogAndOrderStore>();
+        builder.Services.AddSingleton<IProductManagementService>(sp => sp.GetRequiredService<CatalogAndOrderStore>());
+        builder.Services.AddSingleton<IInventoryManagementService>(sp => sp.GetRequiredService<CatalogAndOrderStore>());
+        builder.Services.AddSingleton<IOrderTransactionService>(sp => sp.GetRequiredService<CatalogAndOrderStore>());
+
+        builder.Services.AddSingleton<OrderCartService>();
+        builder.Services.AddSingleton<IReportExportService, ReportExportService>();
+        builder.Services.AddSingleton<IReceiptPrinterService, ReceiptPrinterService>();
+        builder.Services.AddSingleton<IReceiptDocumentService, ReceiptDocumentService>();
+        builder.Services.AddSingleton<IDialogService, DialogService>();
+
+        // ViewModels
+        builder.Services.AddTransient<AuthenticationViewModel>();
+        builder.Services.AddTransient<SalesAnalyticsDashboardViewModel>();
+        builder.Services.AddTransient<ProductRegistrationViewModel>();
+        builder.Services.AddTransient<InventoryManagementViewModel>();
+        builder.Services.AddTransient<UserManagementViewModel>();
+        builder.Services.AddTransient<AuditTrailViewModel>();
+        builder.Services.AddTransient<PointOfSaleViewModel>();
+        builder.Services.AddTransient<PaymentCheckoutViewModel>();
+        builder.Services.AddTransient<ReceiptPreviewViewModel>();
+
+        // Shell & Views
+        builder.Services.AddTransient<AppShell>();
+        builder.Services.AddTransient<AuthenticationPage>();
+        builder.Services.AddTransient<SalesAnalyticsDashboardPage>();
+        builder.Services.AddTransient<ProductRegistrationPage>();
+        builder.Services.AddTransient<InventoryManagementPage>();
+        builder.Services.AddTransient<UserManagementPage>();
+        builder.Services.AddTransient<AuditTrailPage>();
+        builder.Services.AddTransient<PointOfSalePage>();
+        builder.Services.AddTransient<PaymentCheckoutPage>();
+        builder.Services.AddTransient<ReceiptPreviewPage>();
+
+        return builder.Build();
     }
 }

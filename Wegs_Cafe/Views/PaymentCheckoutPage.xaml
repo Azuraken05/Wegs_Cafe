@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.PaymentCheckoutPage"
+             x:DataType="vm:PaymentCheckoutViewModel"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource PureWhite}">
+
+    <ScrollView>
+        <Grid Padding="24" HorizontalOptions="Center" VerticalOptions="Start">
+            <Border x:Name="CheckoutCard"
+                    Style="{StaticResource CardSurface}"
+                    MaximumWidthRequest="580"
+                    MinimumWidthRequest="340"
+                    Padding="28">
+                <VerticalStackLayout Spacing="18">
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="MULTI-PAYMENT CHECKOUT"
+                               FontFamily="QuicksandBold"
+                               FontSize="22"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="{Binding OrderType, StringFormat='Service Type: {0}'}"
+                               Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+
+                    <!-- Error Banner -->
+                    <Border BackgroundColor="#FEF2F2"
+                            Stroke="{StaticResource StatusDanger}"
+                            Padding="14,10"
+                            IsVisible="{Binding HasErrorMessage}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                        <HorizontalStackLayout Spacing="10">
+                            <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="26" HeightRequest="26" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="13" /></Border.StrokeShape>
+                                <Image Source="error_outline.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="{Binding ErrorMessage}"
+                                   TextColor="{StaticResource StatusDanger}"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="13" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- Customer Name / Table Number -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Customer Name or Table Number (min 2 chars)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Border Style="{StaticResource InputFieldBorder}">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding HasCustomerOrTableError}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Entry Text="{Binding CustomerOrTableLabel}" Placeholder="e.g. Table 4 or Alex" BackgroundColor="Transparent" />
+                        </Border>
+                        <Label Text="{Binding CustomerOrTableError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasCustomerOrTableError}" />
+                    </VerticalStackLayout>
+
+                    <!-- Order Totals Summary Box -->
+                    <Border Style="{StaticResource DarkCardSurface}" Padding="20">
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Subtotal Amount" TextColor="#D4D4D8" FontFamily="InterRegular" FontSize="13" />
+                                <Label Grid.Column="1" Text="{Binding SubtotalAmount, Converter={StaticResource CurrencyConverter}}" TextColor="{StaticResource PureWhite}" FontFamily="QuicksandBold" FontSize="15" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,140" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="Discount Amount (PHP)" TextColor="#D4D4D8" FontFamily="InterRegular" FontSize="13" VerticalOptions="Center" />
+                                <Border Grid.Column="1" BackgroundColor="#2C2C2E" Stroke="#3F3F46" Padding="10,2">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                    <Entry Text="{Binding DiscountAmountText}"
+                                           Keyboard="Numeric"
+                                           TextColor="{StaticResource PureWhite}"
+                                           HorizontalTextAlignment="End"
+                                           BackgroundColor="Transparent" />
+                                </Border>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="#3F3F46" Margin="0,4" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="TOTAL PAYABLE" TextColor="{StaticResource PureWhite}" FontFamily="QuicksandBold" FontSize="16" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding TotalPayableAmount, Converter={StaticResource CurrencyConverter}}" TextColor="{StaticResource PureWhite}" FontFamily="QuicksandBold" FontSize="26" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Payment Method Selector (Cash, GCash, Credit Card) -->
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Select Payment Method" FontFamily="QuicksandBold" FontSize="15" TextColor="{StaticResource PrimaryBlack}" />
+
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                            <Button Grid.Column="0"
+                                    Text="Cash"
+                                    ImageSource="payments.png"
+                                    HeightRequest="48"
+                                    CornerRadius="14"
+                                    Command="{Binding SelectPaymentMethodCommand}"
+                                    CommandParameter="Cash">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsCashSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsCashSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+
+                            <Button Grid.Column="1"
+                                    Text="GCash"
+                                    ImageSource="qr_code_2.png"
+                                    HeightRequest="48"
+                                    CornerRadius="14"
+                                    Command="{Binding SelectPaymentMethodCommand}"
+                                    CommandParameter="GCash">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsGCashSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsGCashSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Text="Credit Card"
+                                    ImageSource="credit_card.png"
+                                    HeightRequest="48"
+                                    CornerRadius="14"
+                                    Command="{Binding SelectPaymentMethodCommand}"
+                                    CommandParameter="Credit Card">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsCreditCardSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsCreditCardSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
+                    </VerticalStackLayout>
+
+                    <!-- Cash Tendered Section -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding IsCashSelected}">
+                        <Label Text="Quick Cash Denominations" FontFamily="InterSemiBold" FontSize="13" />
+                        <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="Exact" Style="{StaticResource OutlineSecondaryButton}" HeightRequest="40" Padding="0" FontSize="12" Command="{Binding ApplyQuickCashDenominationCommand}" CommandParameter="Exact" />
+                            <Button Grid.Column="1" Text="₱100" Style="{StaticResource OutlineSecondaryButton}" HeightRequest="40" Padding="0" FontSize="12" Command="{Binding ApplyQuickCashDenominationCommand}" CommandParameter="100" />
+                            <Button Grid.Column="2" Text="₱200" Style="{StaticResource OutlineSecondaryButton}" HeightRequest="40" Padding="0" FontSize="12" Command="{Binding ApplyQuickCashDenominationCommand}" CommandParameter="200" />
+                            <Button Grid.Column="3" Text="₱500" Style="{StaticResource OutlineSecondaryButton}" HeightRequest="40" Padding="0" FontSize="12" Command="{Binding ApplyQuickCashDenominationCommand}" CommandParameter="500" />
+                            <Button Grid.Column="4" Text="₱1000" Style="{StaticResource OutlineSecondaryButton}" HeightRequest="40" Padding="0" FontSize="12" Command="{Binding ApplyQuickCashDenominationCommand}" CommandParameter="1000" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Cash Amount Tendered (PHP)" FontFamily="InterSemiBold" FontSize="12" />
+                                <Border Style="{StaticResource InputFieldBorder}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding HasAmountTenderedError}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                            <Setter Property="StrokeThickness" Value="1.5" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Entry Text="{Binding AmountTenderedText}" Keyboard="Numeric" FontFamily="QuicksandBold" FontSize="18" BackgroundColor="Transparent" />
+                                </Border>
+                                <Label Text="{Binding AmountTenderedError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasAmountTenderedError}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="Customer Change Due" FontFamily="InterSemiBold" FontSize="12" />
+                                <Border BackgroundColor="#ECFDF5" Stroke="{StaticResource StatusSuccess}" Padding="14,10">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="16" /></Border.StrokeShape>
+                                    <Label Text="{Binding ChangeDueAmount, Converter={StaticResource CurrencyConverter}}"
+                                           FontFamily="QuicksandBold"
+                                           FontSize="18"
+                                           TextColor="{StaticResource StatusSuccess}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+
+                    <!-- GCash / Credit Card Reference Section -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding RequiresReferenceNumber}">
+                        <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                Stroke="{StaticResource BorderGray}"
+                                Padding="16"
+                                IsVisible="{Binding IsGCashSelected}">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                            <HorizontalStackLayout Spacing="14">
+                                <Border BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="48" HeightRequest="48" StrokeThickness="0" VerticalOptions="Center">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                    <Image Source="qr_code_2.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label Text="WEG'S CAFE OFFICIAL GCASH MERCHANT QR"
+                                           FontFamily="QuicksandBold"
+                                           FontSize="14"
+                                           TextColor="{StaticResource PrimaryBlack}" />
+                                    <Label Text="Verify customer payment confirmation and enter the GCash Reference Number below."
+                                           Style="{StaticResource MutedCaption}" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding ReferenceFieldTitle}" FontFamily="InterSemiBold" FontSize="13" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasReferenceNumberError}" Value="True">
+                                        <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                        <Setter Property="StrokeThickness" Value="1.5" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Entry Text="{Binding PaymentReferenceNumber}"
+                                       Placeholder="Enter alphanumeric reference number"
+                                       BackgroundColor="Transparent" />
+                            </Border>
+                            <Label Text="{Binding ReferenceNumberError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasReferenceNumberError}" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,8,0,0">
+                        <Button Grid.Column="0"
+                                Text="Back to Cart"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                Command="{Binding CancelCheckoutCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Complete Payment &amp; Generate Receipt"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                IsEnabled="{Binding CanCompletePayment}"
+                                Command="{Binding CompletePaymentTransactionCommand}" />
+                    </Grid>
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+</ContentPage>

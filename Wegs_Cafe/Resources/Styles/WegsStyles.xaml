@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:helpers="clr-namespace:Wegs_Cafe.Helpers">
+
+    <!-- Weg's Cafe Design System.
+         Fonts: QuicksandBold ("Heading") for headers/prices, InterRegular ("Body") / InterSemiBold ("BodySemiBold") for body & tables. -->
+
+    <x:Double x:Key="CardRadius">16</x:Double>
+    <x:Double x:Key="PillRadius">24</x:Double>
+    <CornerRadius x:Key="CardCorner">16</CornerRadius>
+
+    <!-- ===== Typography ===== -->
+    <Style x:Key="HeadingLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="QuicksandBold" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="SubHeadingLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="QuicksandBold" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="PriceLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="QuicksandBold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="BodyLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="BodySemiBoldLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="MutedLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource MutedText}" />
+    </Style>
+
+    <Style x:Key="MutedCaption" TargetType="Label" BasedOn="{StaticResource MutedLabel}" />
+
+    <Style x:Key="ReceiptLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor" Value="{StaticResource OffWhiteCream}" />
+    </Style>
+
+    <!-- ===== Containers ===== -->
+    <Style x:Key="PageBackground" TargetType="ContentPage" ApplyToDerivedTypes="True">
+        <Setter Property="BackgroundColor" Value="{StaticResource PureWhite}" />
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style x:Key="CardSurface" TargetType="Border" BasedOn="{StaticResource Card}" />
+
+    <Style x:Key="CreamCard" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+    </Style>
+
+    <Style x:Key="BlackCard" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="Stroke" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <Style x:Key="DarkCardSurface" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+        <Setter Property="Stroke" Value="{StaticResource CharcoalSurface}" />
+    </Style>
+
+    <Style x:Key="ProductTile" TargetType="Border" BasedOn="{StaticResource CreamCard}">
+        <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <Style x:Key="ReceiptPreview" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <!-- ===== Buttons ===== -->
+    <Style x:Key="PrimaryButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="FontFamily" Value="QuicksandBold" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="HeightRequest" Value="50" />
+        <Setter Property="Padding" Value="20,0" />
+        <Style.Triggers>
+            <Trigger TargetType="Button" Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PrimaryBlackButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}" />
+
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="BorderColor" Value="{StaticResource BorderGray}" />
+        <Setter Property="BorderWidth" Value="1" />
+    </Style>
+
+    <Style x:Key="OutlineSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}" />
+
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+    </Style>
+
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="BackgroundColor" Value="{StaticResource StatusSuccess}" />
+    </Style>
+
+    <!-- Category pill: rounded 24 -->
+    <Style x:Key="PillButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="HeightRequest" Value="42" />
+        <Setter Property="Padding" Value="18,0" />
+        <Setter Property="BorderColor" Value="{StaticResource BorderGray}" />
+        <Setter Property="BorderWidth" Value="1" />
+    </Style>
+
+    <Style x:Key="PillButtonSelected" TargetType="Button" BasedOn="{StaticResource PillButton}">
+        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="BorderColor" Value="{StaticResource PrimaryBlack}" />
+    </Style>
+
+    <!-- ===== Inputs ===== -->
+    <Style x:Key="SearchBorder" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+        <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="24" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="HeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="SearchPillBorder" TargetType="Border" BasedOn="{StaticResource SearchBorder}" />
+
+    <Style x:Key="InputBorder" TargetType="Border" BasedOn="{StaticResource SearchBorder}">
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
+        <Setter Property="HeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="InputFieldBorder" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+        <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="14,4" />
+    </Style>
+
+    <Style x:Key="InvalidInputFieldBorder" TargetType="Border" BasedOn="{StaticResource InputFieldBorder}">
+        <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+        <Setter Property="StrokeThickness" Value="1.5" />
+    </Style>
+
+    <Style x:Key="InlineErrorLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="TextColor" Value="{StaticResource StatusDanger}" />
+    </Style>
+
+    <Style x:Key="BareEntry" TargetType="Entry">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource MutedText}" />
+        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- ===== Status Badges ===== -->
+    <Style x:Key="BadgeBase" TargetType="Border">
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+    </Style>
+    <Style x:Key="LowStockBadge" TargetType="Border" BasedOn="{StaticResource BadgeBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
+    </Style>
+    <Style x:Key="OutOfStockBadge" TargetType="Border" BasedOn="{StaticResource BadgeBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+    </Style>
+    <Style x:Key="PaidBadge" TargetType="Border" BasedOn="{StaticResource BadgeBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource StatusSuccess}" />
+    </Style>
+    <Style x:Key="BadgeLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="White" />
+        <Setter Property="FontFamily" Value="QuicksandBold" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
+    <Style TargetType="Shell" ApplyToDerivedTypes="True">
+        <Setter Property="Shell.BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="Shell.ForegroundColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="Shell.TitleColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource PureWhite}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource PrimaryBlack}" />
+        <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource MutedText}" />
+    </Style>
+</ResourceDictionary>
