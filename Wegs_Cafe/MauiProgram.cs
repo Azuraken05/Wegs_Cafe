@@ -31,7 +31,8 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // Core Services (FirebaseService + Offline-First Local Stores)
+        // Core Services (SQLite Offline Cache + Firebase + Cloudinary)
+        builder.Services.AddSingleton<LocalDatabaseService>();
         builder.Services.AddSingleton<SessionService>();
         builder.Services.AddSingleton<FirebaseService>();
         builder.Services.AddSingleton<ApplicationNavigationService>();

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Wegs_Cafe.Helpers;
 using Wegs_Cafe.Models;
 using Wegs_Cafe.Services;
 using Wegs_Cafe.Views;
@@ -18,6 +19,7 @@ public partial class PointOfSaleViewModel : BaseViewModel
     private readonly IDialogService _dialogService;
 
     private List<Product> _allProducts = new();
+    private CancellationTokenSource? _searchDebounceCts;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -106,9 +108,9 @@ public partial class PointOfSaleViewModel : BaseViewModel
     public IReadOnlyList<string> IceLevelOptions { get; } = new[] { "Regular Ice", "Less Ice", "No Ice" };
     public IReadOnlyList<string> SweetnessOptions { get; } = new[] { "100%", "75%", "50%", "0%" };
 
-    public ObservableCollection<Product> FilteredProducts { get; } = new();
-    public ObservableCollection<Order> ActiveQueueOrders { get; } = new();
-    public ObservableCollection<Order> RecentCompletedAndVoidedOrders { get; } = new();
+    public ObservableRangeCollection<Product> FilteredProducts { get; } = new();
+    public ObservableRangeCollection<Order> ActiveQueueOrders { get; } = new();
+    public ObservableRangeCollection<Order> RecentCompletedAndVoidedOrders { get; } = new();
 
     public string ActiveBaristaDisplay => _sessionService.ActiveUser != null
         ? $"Barista: {_sessionService.ActiveUser.FullName} ({_sessionService.ActiveUser.RoleName})"
@@ -139,7 +141,25 @@ public partial class PointOfSaleViewModel : BaseViewModel
         _orderCartService.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CanProceedToCheckout));
     }
 
-    partial void OnSearchQueryChanged(string value) => ApplyProductFilters();
+    partial void OnSearchQueryChanged(string value)
+    {
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                if (!token.IsCancellationRequested)
+                    MainThread.BeginInvokeOnMainThread(ApplyProductFilters);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
     partial void OnSelectedCategoryChanged(string value) => ApplyProductFilters();
     partial void OnCustomerOrTableLabelChanged(string value)
     {
@@ -164,19 +184,14 @@ public partial class PointOfSaleViewModel : BaseViewModel
             ApplyProductFilters();
 
             var orders = await _orderTransactionService.GetOrdersAsync();
-            RecentCompletedAndVoidedOrders.Clear();
-            ActiveQueueOrders.Clear();
+            var recent = orders.Take(25).ToList();
+            RecentCompletedAndVoidedOrders.ReplaceAll(recent);
 
-            foreach (var order in orders.Take(25))
-            {
-                RecentCompletedAndVoidedOrders.Add(order);
-                if (!order.IsVoided &&
-                    (order.PreparationStatus == OrderPreparationStatuses.Preparing ||
-                     order.PreparationStatus == OrderPreparationStatuses.Ready))
-                {
-                    ActiveQueueOrders.Add(order);
-                }
-            }
+            var activeQueue = recent.Where(order =>
+                !order.IsVoided &&
+                (order.PreparationStatus == OrderPreparationStatuses.Preparing ||
+                 order.PreparationStatus == OrderPreparationStatuses.Ready)).ToList();
+            ActiveQueueOrders.ReplaceAll(activeQueue);
             OnPropertyChanged(nameof(HasActiveQueueOrders));
 
             var printers = await _receiptPrinterService.GetPairedPrintersAsync();
@@ -522,8 +537,6 @@ public partial class PointOfSaleViewModel : BaseViewModel
                 product.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        FilteredProducts.Clear();
-        foreach (var item in filtered)
-            FilteredProducts.Add(item);
+        FilteredProducts.ReplaceAll(filtered.ToList());
     }
 }

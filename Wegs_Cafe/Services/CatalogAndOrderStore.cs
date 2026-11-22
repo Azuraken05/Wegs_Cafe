@@ -21,6 +21,10 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
     private readonly string _inventoryLogsFilePath = Path.Combine(FileSystem.AppDataDirectory, "inventory_logs_v3.json");
     private readonly string _ordersFilePath = Path.Combine(FileSystem.AppDataDirectory, "orders_v3.json");
 
+    private List<Product>? _cachedProducts;
+    private List<Order>? _cachedOrders;
+    private List<InventoryLog>? _cachedInventoryLogs;
+
     public event EventHandler? InventoryChanged;
 
     public CatalogAndOrderStore(
@@ -306,10 +310,10 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         if (!_sessionService.CanViewInventory)
             throw new UnauthorizedAccessException("You do not have permission to view inventory logs.");
 
-        await _mutex.WaitAsync();
+        await _mutex.WaitAsync().ConfigureAwait(false);
         try
         {
-            var logs = await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath);
+            var logs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
             return logs.OrderByDescending(log => log.RecordedAt).ToList();
         }
         finally
@@ -424,7 +428,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
             orders.Add(completedOrder);
 
-            var inventoryLogs = await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath);
+            var inventoryLogs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
             foreach (var (product, quantitySold) in stockDeductions)
             {
                 var previousStock = product.StockQuantity;
@@ -531,7 +535,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                 throw new ValidationException("This order has already been voided.");
 
             var products = await EnsureProductsSeededAsync();
-            var inventoryLogs = await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath);
+            var inventoryLogs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
 
             foreach (var item in targetOrder.OrderItems)
             {
@@ -593,7 +597,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         int newQuantity,
         string remarks)
     {
-        var logs = await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath);
+        var logs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
         var log = new InventoryLog
         {
             InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
@@ -659,10 +663,16 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
     private async Task<List<Product>> EnsureProductsSeededAsync()
     {
+        if (_cachedProducts != null) return _cachedProducts;
+
         if (File.Exists(_productsFilePath))
         {
-            var existing = await JsonStorageFile.ReadListAsync<Product>(_productsFilePath);
-            if (existing.Count > 0) return existing;
+            var existing = await JsonStorageFile.ReadListAsync<Product>(_productsFilePath).ConfigureAwait(false);
+            if (existing.Count > 0)
+            {
+                _cachedProducts = existing;
+                return _cachedProducts;
+            }
         }
 
         var seededProducts = new List<Product>
@@ -680,16 +690,23 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             new() { ProductIdentifier = "product-oat-milk", StockKeepingUnit = "WEGS-ADD-01", ProductName = "Oat Milk Upgrade", Category = ProductCategories.AddOns, SellingPrice = 35m, CostPrice = 12m, StockQuantity = 50, LowStockThreshold = 10, MeasurementUnit = "servings", AllowDrinkModifiers = false }
         };
 
-        await JsonStorageFile.WriteListAsync(_productsFilePath, seededProducts);
-        return seededProducts;
+        await JsonStorageFile.WriteListAsync(_productsFilePath, seededProducts).ConfigureAwait(false);
+        _cachedProducts = seededProducts;
+        return _cachedProducts;
     }
 
     private async Task<List<Order>> EnsureOrdersSeededAsync()
     {
+        if (_cachedOrders != null) return _cachedOrders;
+
         if (File.Exists(_ordersFilePath))
         {
-            var existing = await JsonStorageFile.ReadListAsync<Order>(_ordersFilePath);
-            if (existing.Count > 0) return existing;
+            var existing = await JsonStorageFile.ReadListAsync<Order>(_ordersFilePath).ConfigureAwait(false);
+            if (existing.Count > 0)
+            {
+                _cachedOrders = existing;
+                return _cachedOrders;
+            }
         }
 
         var today = DateTime.Now.Date;
@@ -727,7 +744,8 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         };
 
         var seededOrders = new List<Order> { sampleOrder };
-        await JsonStorageFile.WriteListAsync(_ordersFilePath, seededOrders);
-        return seededOrders;
+        await JsonStorageFile.WriteListAsync(_ordersFilePath, seededOrders).ConfigureAwait(false);
+        _cachedOrders = seededOrders;
+        return _cachedOrders;
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Wegs_Cafe.Helpers;
 using Wegs_Cafe.Models;
 using Wegs_Cafe.Services;
 
@@ -13,6 +14,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     private readonly IDialogService _dialogService;
 
     private List<Product> _allProducts = new();
+    private CancellationTokenSource? _searchDebounceCts;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -107,7 +109,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     public IReadOnlyList<string> AvailableCategories { get; } = ProductCategories.All;
     public IReadOnlyList<string> FilterCategories { get; } = ProductCategories.AllWithFilter;
 
-    public ObservableCollection<Product> FilteredProducts { get; } = new();
+    public ObservableRangeCollection<Product> FilteredProducts { get; } = new();
 
     public ProductRegistrationViewModel(
         IProductManagementService productManagementService,
@@ -122,7 +124,25 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         ValidateFormLive();
     }
 
-    partial void OnSearchQueryChanged(string value) => ApplyFilters();
+    partial void OnSearchQueryChanged(string value)
+    {
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                if (!token.IsCancellationRequested)
+                    MainThread.BeginInvokeOnMainThread(ApplyFilters);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
     partial void OnSelectedFilterCategoryChanged(string value) => ApplyFilters();
     partial void OnProductNameChanged(string value) => ValidateFormLive();
     partial void OnStockKeepingUnitChanged(string value) => ValidateFormLive();
@@ -396,9 +416,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
                 item.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        FilteredProducts.Clear();
-        foreach (var item in filtered)
-            FilteredProducts.Add(item);
+        FilteredProducts.ReplaceAll(filtered.ToList());
     }
 
     private void GenerateNextSku()

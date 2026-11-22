@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Wegs_Cafe.Helpers;
 using Wegs_Cafe.Models;
 using Wegs_Cafe.Services;
 
@@ -14,6 +15,7 @@ public partial class InventoryManagementViewModel : BaseViewModel
     private readonly IDialogService _dialogService;
 
     private List<Product> _allProducts = new();
+    private CancellationTokenSource? _searchDebounceCts;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -70,8 +72,8 @@ public partial class InventoryManagementViewModel : BaseViewModel
     public bool CanSubmitAdjustment => IsAdjustmentValid && IsNotBusy;
 
     public IReadOnlyList<string> MovementTypeOptions { get; } = InventoryMovementTypes.EditableMovements;
-    public ObservableCollection<Product> FilteredProducts { get; } = new();
-    public ObservableCollection<InventoryLog> RecentInventoryLogs { get; } = new();
+    public ObservableRangeCollection<Product> FilteredProducts { get; } = new();
+    public ObservableRangeCollection<InventoryLog> RecentInventoryLogs { get; } = new();
 
     public InventoryManagementViewModel(
         IProductManagementService productManagementService,
@@ -86,7 +88,25 @@ public partial class InventoryManagementViewModel : BaseViewModel
         PageTitle = "Inventory Management";
     }
 
-    partial void OnSearchQueryChanged(string value) => ApplyFilters();
+    partial void OnSearchQueryChanged(string value)
+    {
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                if (!token.IsCancellationRequested)
+                    MainThread.BeginInvokeOnMainThread(ApplyFilters);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
     partial void OnSelectedStockFilterChanged(string value) => ApplyFilters();
     partial void OnSelectedMovementTypeChanged(string value)
     {
@@ -146,9 +166,7 @@ public partial class InventoryManagementViewModel : BaseViewModel
             ApplyFilters();
 
             var logs = await _inventoryManagementService.GetInventoryLogsAsync();
-            RecentInventoryLogs.Clear();
-            foreach (var log in logs.Take(40))
-                RecentInventoryLogs.Add(log);
+            RecentInventoryLogs.ReplaceAll(logs.Take(40).ToList());
         }
         catch (Exception ex)
         {
@@ -243,8 +261,6 @@ public partial class InventoryManagementViewModel : BaseViewModel
                 item.Category.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        FilteredProducts.Clear();
-        foreach (var item in filtered.OrderBy(product => product.StockQuantity))
-            FilteredProducts.Add(item);
+        FilteredProducts.ReplaceAll(filtered.OrderBy(product => product.StockQuantity).ToList());
     }
 }

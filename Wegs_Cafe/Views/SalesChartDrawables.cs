@@ -4,7 +4,7 @@ using Wegs_Cafe.Helpers;
 namespace Wegs_Cafe.Views;
 
 /// <summary>
-/// Renders the Sales Revenue & Order Count Bar + Trend Line Chart for Day, Week, and Month timeframes.
+/// Renders the Sales Revenue &amp; Order Count Bar + Trend Line Chart for Day, Week, and Month timeframes.
 /// </summary>
 public class SalesTrendBarChartDrawable : IDrawable
 {
@@ -172,7 +172,7 @@ public class SalesTrendBarChartDrawable : IDrawable
 }
 
 /// <summary>
-/// Renders a Horizontal Proportional Bar & Legend for Cash, GCash, and Credit Card revenue split.
+/// Renders a Horizontal Proportional Bar &amp; Legend for Cash, GCash, and Credit Card revenue split.
 /// </summary>
 public class PaymentMethodBreakdownDrawable : IDrawable
 {

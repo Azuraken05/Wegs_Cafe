@@ -36,6 +36,10 @@ public static class MaterialIcons
         public const string AddAPhoto = "add_a_photo.png";
 
         // Additional Utility Icons
+        public const string CloudDone = "cloud_done.png";
+        public const string Sync = "sync.png";
+        public const string CloudOff = "cloud_off.png";
+        public const string LockPerson = "lock_person.png";
         public const string Dashboard = "dashboard.png";
         public const string Group = "group.png";
         public const string AuditTrail = "history_edu.png";

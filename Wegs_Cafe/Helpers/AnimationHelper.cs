@@ -10,14 +10,22 @@ public static class AnimationHelper
     public static async Task AnimateEntranceAsync(VisualElement element, uint durationMilliseconds = 220, int delayMilliseconds = 0)
     {
         if (element == null) return;
-        element.Opacity = 0;
-        element.TranslationY = 18;
-        if (delayMilliseconds > 0)
-            await Task.Delay(delayMilliseconds);
+        try
+        {
+            element.Opacity = 0;
+            element.TranslationY = 18;
+            if (delayMilliseconds > 0)
+                await Task.Delay(delayMilliseconds);
 
-        await Task.WhenAll(
-            element.FadeToAsync(1.0, durationMilliseconds, Easing.CubicOut),
-            element.TranslateToAsync(0, 0, durationMilliseconds, Easing.CubicOut));
+            await Task.WhenAll(
+                element.FadeToAsync(1.0, durationMilliseconds, Easing.CubicOut),
+                element.TranslateToAsync(0, 0, durationMilliseconds, Easing.CubicOut));
+        }
+        catch
+        {
+            element.Opacity = 1.0;
+            element.TranslationY = 0;
+        }
     }
 
     /// <summary>Tactile ScaleTo(0.96, 80, Easing.CubicInOut) spring-back effect when pressing buttons or product tiles.</summary>

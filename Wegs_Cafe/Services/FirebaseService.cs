@@ -20,6 +20,7 @@ public class FirebaseService
         var primaryConfig = new FirebaseAuthConfig
         {
             ApiKey = FirebaseConfiguration.WebApiKey,
+            AuthDomain = "wegs-cafe-pos.firebaseapp.com",
             Providers = new FirebaseAuthProvider[] { new EmailProvider() }
         };
         PrimaryAuthenticationClient = new FirebaseAuthClient(primaryConfig);
@@ -27,6 +28,7 @@ public class FirebaseService
         var secondaryConfig = new FirebaseAuthConfig
         {
             ApiKey = FirebaseConfiguration.WebApiKey,
+            AuthDomain = "wegs-cafe-pos.firebaseapp.com",
             Providers = new FirebaseAuthProvider[] { new EmailProvider() }
         };
         SecondaryStaffRegistrationClient = new FirebaseAuthClient(secondaryConfig);

@@ -42,18 +42,48 @@ public class StringEmptyConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
-/// <summary>Converts an image_url (HTTP URL or local file path) into a MAUI ImageSource.</summary>
+/// <summary>
+/// Converts an image_url (Cloudinary HTTP URL or local file path) into a cached MAUI ImageSource.
+/// Injects Cloudinary on-the-fly thumbnail transformation (/upload/w_300,h_300,c_fill,q_auto,f_auto/)
+/// and enables 30-day device disk caching.
+/// </summary>
 public class ImagePathConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var path = value as string;
         if (string.IsNullOrWhiteSpace(path)) return null;
+
         if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return ImageSource.FromUri(new Uri(path));
+        {
+            var transformedUrl = InjectCloudinaryThumbnail(path);
+            return new UriImageSource
+            {
+                Uri = new Uri(transformedUrl),
+                CachingEnabled = true,
+                CacheValidity = TimeSpan.FromDays(30)
+            };
+        }
+
         return File.Exists(path) ? ImageSource.FromFile(path) : null;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
+
+    public static string InjectCloudinaryThumbnail(string url)
+    {
+        const string uploadSegment = "/upload/";
+        const string transformSegment = "/upload/w_300,h_300,c_fill,q_auto,f_auto/";
+
+        if (url.Contains("res.cloudinary.com", StringComparison.OrdinalIgnoreCase) &&
+            url.Contains(uploadSegment, StringComparison.OrdinalIgnoreCase) &&
+            !url.Contains("w_300,h_300", StringComparison.OrdinalIgnoreCase))
+        {
+            var index = url.IndexOf(uploadSegment, StringComparison.OrdinalIgnoreCase);
+            return url[..index] + transformSegment + url[(index + uploadSegment.Length)..];
+        }
+
+        return url;
+    }
 }

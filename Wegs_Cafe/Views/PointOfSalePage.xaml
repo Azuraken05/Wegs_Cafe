@@ -127,6 +127,7 @@
                 <!-- Responsive Product Catalog Grid -->
                 <CollectionView Grid.Row="2"
                                 ItemsSource="{Binding FilteredProducts}"
+                                ItemSizingStrategy="MeasureFirstItem"
                                 SelectionMode="None"
                                 IsVisible="{Binding IsOrderHistoryPanelVisible, Converter={StaticResource InverseBoolConverter}}">
                     <CollectionView.ItemsLayout>

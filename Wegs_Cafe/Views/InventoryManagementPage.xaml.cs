@@ -6,6 +6,7 @@ namespace Wegs_Cafe.Views;
 public partial class InventoryManagementPage : ContentPage
 {
     private readonly InventoryManagementViewModel _viewModel;
+    private bool _hasAnimated;
 
     public InventoryManagementPage(InventoryManagementViewModel viewModel)
     {
@@ -18,6 +19,10 @@ public partial class InventoryManagementPage : ContentPage
     {
         base.OnAppearing();
         await _viewModel.LoadInventoryCommand.ExecuteAsync(null);
-        await AnimationHelper.AnimateEntranceAsync(InventoryContainer);
+        if (!_hasAnimated)
+        {
+            _hasAnimated = true;
+            await AnimationHelper.AnimateEntranceAsync(InventoryContainer, 150);
+        }
     }
 }

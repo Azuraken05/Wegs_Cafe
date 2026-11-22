@@ -7,6 +7,7 @@ namespace Wegs_Cafe.Views;
 public partial class PointOfSalePage : ContentPage
 {
     private readonly PointOfSaleViewModel _viewModel;
+    private bool _hasAnimated;
 
     public PointOfSalePage(PointOfSaleViewModel viewModel)
     {
@@ -20,7 +21,11 @@ public partial class PointOfSalePage : ContentPage
     {
         base.OnAppearing();
         await _viewModel.LoadPointOfSaleDataCommand.ExecuteAsync(null);
-        await AnimationHelper.AnimateEntranceAsync(PointOfSaleContainer);
+        if (!_hasAnimated)
+        {
+            _hasAnimated = true;
+            await AnimationHelper.AnimateEntranceAsync(PointOfSaleContainer, 150);
+        }
     }
 
     private async void OnDrinkModifierModalRequested(object? sender, EventArgs e)

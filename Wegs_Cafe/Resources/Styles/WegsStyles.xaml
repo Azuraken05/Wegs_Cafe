@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:helpers="clr-namespace:Wegs_Cafe.Helpers">
 
     <!-- Weg's Cafe Design System.
          Fonts: QuicksandBold ("Heading") for headers/prices, InterRegular ("Body") / InterSemiBold ("BodySemiBold") for body & tables. -->
@@ -64,7 +65,7 @@
         <Setter Property="BackgroundColor" Value="{StaticResource PureWhite}" />
         <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="Padding" Value="16" />
     </Style>
 
@@ -90,7 +91,7 @@
 
     <Style x:Key="ReceiptPreview" TargetType="Border">
         <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="StrokeThickness" Value="0" />
         <Setter Property="Padding" Value="16" />
     </Style>
@@ -154,7 +155,7 @@
         <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
         <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="24" />
         <Setter Property="Padding" Value="16,0" />
         <Setter Property="HeightRequest" Value="48" />
     </Style>
@@ -162,7 +163,7 @@
     <Style x:Key="SearchPillBorder" TargetType="Border" BasedOn="{StaticResource SearchBorder}" />
 
     <Style x:Key="InputBorder" TargetType="Border" BasedOn="{StaticResource SearchBorder}">
-        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="HeightRequest" Value="48" />
     </Style>
 
@@ -170,7 +171,7 @@
         <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
         <Setter Property="Stroke" Value="{StaticResource BorderGray}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="Padding" Value="14,4" />
     </Style>
 
@@ -197,7 +198,7 @@
     <!-- ===== Status Badges ===== -->
     <Style x:Key="BadgeBase" TargetType="Border">
         <Setter Property="StrokeThickness" Value="0" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="12" />
         <Setter Property="Padding" Value="10,4" />
         <Setter Property="HorizontalOptions" Value="Start" />
     </Style>
