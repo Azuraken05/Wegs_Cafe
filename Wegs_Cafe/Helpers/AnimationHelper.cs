@@ -28,12 +28,19 @@ public static class AnimationHelper
         }
     }
 
-    /// <summary>Tactile ScaleTo(0.96, 80, Easing.CubicInOut) spring-back effect when pressing buttons or product tiles.</summary>
+    /// <summary>Fast tactile ScaleTo(0.97, 60) spring-back effect when pressing buttons or product tiles.</summary>
     public static async Task AnimatePressAsync(VisualElement? element)
     {
         if (element == null) return;
-        await element.ScaleToAsync(0.96, 80, Easing.CubicInOut);
-        await element.ScaleToAsync(1.0, 90, Easing.CubicOut);
+        try
+        {
+            await element.ScaleToAsync(0.97, 60, Easing.CubicInOut);
+            await element.ScaleToAsync(1.0, 60, Easing.CubicOut);
+        }
+        catch
+        {
+            element.Scale = 1.0;
+        }
     }
 
     /// <summary>Smooth bottom-sheet / slide-in drawer open transition with backdrop dim fade.</summary>

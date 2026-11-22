@@ -11,22 +11,23 @@
 
     <ScrollView>
         <Grid x:Name="UserManagementContainer"
-              Padding="20"
+              Padding="16"
               ColumnDefinitions="{OnIdiom Phone='*', Tablet='440,*', Desktop='460,*'}"
               RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
-              ColumnSpacing="18"
-              RowSpacing="18">
+              ColumnSpacing="16"
+              RowSpacing="16">
 
-            <!-- Left Column: Owner Staff Registration Form with Real-Time Inline Validation -->
-            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="20" VerticalOptions="Start">
-                <VerticalStackLayout Spacing="14">
+            <!-- Left Column: Owner Staff Registration Form with High-Contrast Black Text -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="16" VerticalOptions="Start">
+                <VerticalStackLayout Spacing="12">
                     <Label Text="REGISTER STAFF ACCOUNT &amp; ROLE PERMISSIONS"
                            FontFamily="QuicksandBold"
-                           FontSize="17"
-                           TextColor="{StaticResource PrimaryBlack}" />
+                           FontSize="16"
+                           TextColor="#0A0A0A" />
 
                     <Label Text="Owner-only provisioning via isolated secondary Firebase Auth so the Owner stays logged in."
-                           Style="{StaticResource MutedCaption}" />
+                           FontSize="12"
+                           TextColor="#52525B" />
 
                     <Border BackgroundColor="#FEF2F2"
                             Stroke="{StaticResource StatusDanger}"
@@ -44,7 +45,7 @@
 
                     <!-- Full Name -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Full Name" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Full Name" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                         <Border Style="{StaticResource InputFieldBorder}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasFullNameError}" Value="True">
@@ -52,7 +53,11 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding FullName}" Placeholder="e.g. Maria Santos" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding FullName}"
+                                   Placeholder="e.g. Maria Santos"
+                                   TextColor="#0A0A0A"
+                                   PlaceholderColor="#52525B"
+                                   BackgroundColor="Transparent" />
                         </Border>
                         <HorizontalStackLayout Spacing="6" IsVisible="{Binding HasFullNameError}">
                             <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="16" HeightRequest="16" StrokeThickness="0">
@@ -65,7 +70,7 @@
 
                     <!-- Email Address -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Email Address" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Email Address" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                         <Border Style="{StaticResource InputFieldBorder}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasEmailAddressError}" Value="True">
@@ -73,7 +78,12 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding EmailAddress}" Keyboard="Email" Placeholder="barista@wegscafe.com" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding EmailAddress}"
+                                   Keyboard="Email"
+                                   Placeholder="barista@wegscafe.com"
+                                   TextColor="#0A0A0A"
+                                   PlaceholderColor="#52525B"
+                                   BackgroundColor="Transparent" />
                         </Border>
                         <HorizontalStackLayout Spacing="6" IsVisible="{Binding HasEmailAddressError}">
                             <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="16" HeightRequest="16" StrokeThickness="0">
@@ -87,7 +97,7 @@
                     <!-- Password + Quick-Switch PIN -->
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Password" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Password" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasPasswordError}" Value="True">
@@ -95,13 +105,18 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding Password}" IsPassword="True" Placeholder="8+ chars, 1 upper, 1 num" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding Password}"
+                                       IsPassword="True"
+                                       Placeholder="8+ chars, 1 upper, 1 num"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding PasswordError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasPasswordError}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Quick-Switch PIN" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Quick-Switch PIN" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasSecurityPinError}" Value="True">
@@ -109,7 +124,14 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding SecurityPin}" IsPassword="True" Keyboard="Numeric" MaxLength="6" Placeholder="4-6 digits" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding SecurityPin}"
+                                       IsPassword="True"
+                                       Keyboard="Numeric"
+                                       MaxLength="6"
+                                       Placeholder="4-6 digits"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding SecurityPinError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasSecurityPinError}" />
                         </VerticalStackLayout>
@@ -117,17 +139,18 @@
 
                     <!-- Assigned User Level / Role -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Assigned User Level / Role" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Assigned User Level / Role" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                         <Border Style="{StaticResource InputFieldBorder}">
                             <Picker ItemsSource="{Binding RolePresetOptions}"
                                     SelectedItem="{Binding SelectedRolePreset}"
-                                    TextColor="{StaticResource PrimaryBlack}" />
+                                    TextColor="#0A0A0A"
+                                    TitleColor="#0A0A0A" />
                         </Border>
                     </VerticalStackLayout>
 
-                    <!-- Custom Role Name (shown when Custom Role is selected) -->
+                    <!-- Custom Role Name -->
                     <VerticalStackLayout Spacing="4" IsVisible="{Binding IsCustomRolePreset}">
-                        <Label Text="Custom Role Title" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Custom Role Title" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                         <Border Style="{StaticResource InputFieldBorder}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasRoleNameError}" Value="True">
@@ -135,42 +158,46 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding CustomRoleName}" Placeholder="e.g. Shift Supervisor" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding CustomRoleName}"
+                                   Placeholder="e.g. Shift Supervisor"
+                                   TextColor="#0A0A0A"
+                                   PlaceholderColor="#52525B"
+                                   BackgroundColor="Transparent" />
                         </Border>
                         <Label Text="{Binding RoleNameError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasRoleNameError}" />
                     </VerticalStackLayout>
 
-                    <!-- Granular Role Permission Toggles -->
+                    <!-- Granular Role Permission Toggles (Explicit #0A0A0A text) -->
                     <Border BackgroundColor="{StaticResource OffWhiteCream}"
                             Stroke="{StaticResource BorderGray}"
                             Padding="14,12">
                         <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="GRANULAR ROLE PERMISSIONS" FontFamily="QuicksandBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="GRANULAR ROLE PERMISSIONS" FontFamily="QuicksandBold" FontSize="12" TextColor="#0A0A0A" />
 
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="Access Point of Sale (can_access_point_of_sale)" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding CanAccessPointOfSale}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Access Point of Sale" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding CanAccessPointOfSale}" OnColor="#0A0A0A" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="View Inventory Levels (can_view_inventory)" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding CanViewInventory}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="View Inventory Levels" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding CanViewInventory}" OnColor="#0A0A0A" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="Restock / Adjust Inventory (can_restock_inventory)" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding CanRestockInventory}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Restock / Adjust Inventory" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding CanRestockInventory}" OnColor="#0A0A0A" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="Register Products (can_register_products)" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding CanRegisterProducts}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Register Products" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding CanRegisterProducts}" OnColor="#0A0A0A" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="Void Orders (can_void_orders)" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding CanVoidOrders}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Void Orders" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding CanVoidOrders}" OnColor="#0A0A0A" />
                             </Grid>
 
                             <Label Text="{Binding PermissionsError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasPermissionsError}" />
@@ -178,7 +205,7 @@
                     </Border>
 
                     <Button Text="Register Staff Account"
-                            Style="{StaticResource PrimaryBlackButton}"
+                            Style="{StaticResource PrimaryActionButtonStyle}"
                             IsEnabled="{Binding CanSubmitForm}"
                             Command="{Binding RegisterStaffAccountCommand}" />
                 </VerticalStackLayout>
@@ -188,14 +215,16 @@
             <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
                     Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
                     Style="{StaticResource CardSurface}"
-                    Padding="20">
-                <VerticalStackLayout Spacing="14">
+                    Padding="16">
+                <VerticalStackLayout Spacing="12">
                     <Label Text="REGISTERED USER ACCOUNTS (users)"
                            FontFamily="QuicksandBold"
-                           FontSize="17"
-                           TextColor="{StaticResource PrimaryBlack}" />
+                           FontSize="16"
+                           TextColor="#0A0A0A" />
 
-                    <CollectionView ItemsSource="{Binding UserAccounts}" SelectionMode="None">
+                    <CollectionView ItemsSource="{Binding UserAccounts}"
+                                    ItemSizingStrategy="MeasureFirstItem"
+                                    SelectionMode="None">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
                         </CollectionView.ItemsLayout>
@@ -203,53 +232,68 @@
                             <DataTemplate x:DataType="models:UserAccount">
                                 <Border BackgroundColor="{StaticResource OffWhiteCream}"
                                         Stroke="{StaticResource BorderGray}"
-                                        Padding="14,12">
+                                        StrokeThickness="1"
+                                        Padding="12">
                                     <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
-                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" VerticalOptions="Center">
-                                        <VerticalStackLayout Grid.Column="0" Spacing="3">
-                                            <HorizontalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
+                                            <!-- Row 0: FullName + Role Pill -->
+                                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                                 <Label Text="{Binding FullName}"
                                                        FontFamily="QuicksandBold"
-                                                       FontSize="15"
-                                                       TextColor="{StaticResource PrimaryBlack}" />
-                                                <Border BackgroundColor="{StaticResource PrimaryBlack}"
-                                                        Padding="8,2"
-                                                        StrokeThickness="0">
+                                                       FontSize="14"
+                                                       FontAttributes="Bold"
+                                                       TextColor="#0A0A0A"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation"
+                                                       VerticalOptions="Center" />
+                                                <Border BackgroundColor="#0A0A0A"
+                                                        Padding="6,2"
+                                                        StrokeThickness="0"
+                                                        VerticalOptions="Center">
                                                     <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
                                                     <Label Text="{Binding RoleBadgeText}"
                                                            FontFamily="QuicksandBold"
                                                            FontSize="10"
-                                                           TextColor="{StaticResource PureWhite}" />
+                                                           TextColor="#FFFFFF" />
                                                 </Border>
                                             </HorizontalStackLayout>
 
-                                            <Label Text="{Binding EmailAddress}"
-                                                   Style="{StaticResource MutedCaption}" />
+                                            <!-- Row 1: EmailAddress + Active Badge -->
+                                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                <Label Text="{Binding EmailAddress}"
+                                                       FontSize="12"
+                                                       TextColor="#3F3F46"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation"
+                                                       VerticalOptions="Center" />
+                                                <Border BackgroundColor="{StaticResource StatusSuccess}"
+                                                        Padding="6,2"
+                                                        StrokeThickness="0"
+                                                        VerticalOptions="Center">
+                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                    <Border.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="False">
+                                                            <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                                        </DataTrigger>
+                                                    </Border.Triggers>
+                                                    <Label Text="{Binding StatusBadgeText}"
+                                                           FontFamily="QuicksandBold"
+                                                           FontSize="10"
+                                                           TextColor="#FFFFFF" />
+                                                </Border>
+                                            </HorizontalStackLayout>
                                         </VerticalStackLayout>
 
-                                        <Border Grid.Column="1"
-                                                BackgroundColor="{StaticResource StatusSuccess}"
-                                                Padding="10,4"
-                                                StrokeThickness="0"
-                                                VerticalOptions="Center">
-                                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
-                                            <Border.Triggers>
-                                                <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="False">
-                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
-                                                </DataTrigger>
-                                            </Border.Triggers>
-                                            <Label Text="{Binding StatusBadgeText}"
-                                                   FontFamily="QuicksandBold"
-                                                   FontSize="11"
-                                                   TextColor="{StaticResource PureWhite}" />
-                                        </Border>
-
-                                        <Button Grid.Column="2"
+                                        <!-- Col 1: Compact Toggle Active Button -->
+                                        <Button Grid.Column="1"
                                                 Text="Toggle Active"
-                                                Style="{StaticResource OutlineSecondaryButton}"
-                                                HeightRequest="36"
-                                                Padding="12,0"
-                                                FontSize="12"
+                                                Style="{StaticResource CompactCardButtonStyle}"
+                                                BackgroundColor="#FFFFFF"
+                                                TextColor="#0A0A0A"
+                                                BorderColor="#D4D4D8"
+                                                BorderWidth="1"
+                                                VerticalOptions="Center"
                                                 Command="{Binding Source={x:Reference UserManagementRoot}, Path=BindingContext.ToggleAccountActiveStatusCommand}"
                                                 CommandParameter="{Binding .}" />
                                     </Grid>

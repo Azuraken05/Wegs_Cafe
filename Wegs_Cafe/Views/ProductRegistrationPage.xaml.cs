@@ -15,14 +15,9 @@ public partial class ProductRegistrationPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadCatalogCommand.ExecuteAsync(null);
-        if (!_hasAnimated)
-        {
-            _hasAnimated = true;
-            await AnimationHelper.AnimateEntranceAsync(ProductPageContainer, 150);
-        }
+        _ = _viewModel.LoadCatalogCommand.ExecuteAsync(null);
     }
 }

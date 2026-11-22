@@ -14,10 +14,9 @@ public partial class UserManagementPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadUserAccountsCommand.ExecuteAsync(null);
-        await AnimationHelper.AnimateEntranceAsync(UserManagementContainer);
+        _ = _viewModel.LoadUserAccountsCommand.ExecuteAsync(null);
     }
 }

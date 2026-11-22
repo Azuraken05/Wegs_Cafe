@@ -18,8 +18,19 @@ public partial class PointOfSaleViewModel : BaseViewModel
     private readonly SessionService _sessionService;
     private readonly IDialogService _dialogService;
 
+    private readonly LocalDatabaseService _localDatabaseService;
     private List<Product> _allProducts = new();
     private CancellationTokenSource? _searchDebounceCts;
+    private bool _isInitialized;
+
+    [ObservableProperty]
+    private string _syncStatusText = "Synced";
+
+    [ObservableProperty]
+    private string _syncStatusIcon = MaterialIcons.Assets.CloudDone;
+
+    [ObservableProperty]
+    private Color _syncStatusColor = Color.FromArgb("#16A34A");
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -125,7 +136,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
         IReceiptPrinterService receiptPrinterService,
         OrderCartService orderCartService,
         SessionService sessionService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        LocalDatabaseService localDatabaseService)
     {
         _productManagementService = productManagementService;
         _orderTransactionService = orderTransactionService;
@@ -134,11 +146,14 @@ public partial class PointOfSaleViewModel : BaseViewModel
         _orderCartService = orderCartService;
         _sessionService = sessionService;
         _dialogService = dialogService;
+        _localDatabaseService = localDatabaseService;
         PageTitle = "Point of Sale";
 
-        _inventoryManagementService.InventoryChanged += async (_, _) => await LoadPointOfSaleDataAsync();
+        _inventoryManagementService.InventoryChanged += async (_, _) => await RefreshPointOfSaleDataAsync();
         _sessionService.ActiveUserChanged += (_, _) => OnPropertyChanged(nameof(ActiveBaristaDisplay));
         _orderCartService.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CanProceedToCheckout));
+        Connectivity.Current.ConnectivityChanged += (_, _) => _ = UpdateSyncStatusAsync();
+        _ = UpdateSyncStatusAsync();
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -172,41 +187,108 @@ public partial class PointOfSaleViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadPointOfSaleDataAsync()
     {
+        if (_isInitialized || IsBusy) return;
+        _isInitialized = true;
+        await RefreshPointOfSaleDataAsync();
+    }
+
+    public async Task RefreshPointOfSaleDataAsync()
+    {
         if (IsBusy) return;
         ClearError();
 
         try
         {
             IsBusy = true;
-            OnPropertyChanged(nameof(ActiveBaristaDisplay));
-            var products = await _productManagementService.GetProductsAsync();
-            _allProducts = products.ToList();
-            ApplyProductFilters();
+            var (products, recentOrders, activeQueue, printerSummary) = await Task.Run(async () =>
+            {
+                var loadedProducts = (await _productManagementService.GetProductsAsync().ConfigureAwait(false)).ToList();
+                var loadedOrders = (await _orderTransactionService.GetOrdersAsync().ConfigureAwait(false)).Take(25).ToList();
+                var queue = loadedOrders.Where(order =>
+                    !order.IsVoided &&
+                    (order.PreparationStatus == OrderPreparationStatuses.Preparing ||
+                     order.PreparationStatus == OrderPreparationStatuses.Ready)).ToList();
 
-            var orders = await _orderTransactionService.GetOrdersAsync();
-            var recent = orders.Take(25).ToList();
-            RecentCompletedAndVoidedOrders.ReplaceAll(recent);
+                var printers = await _receiptPrinterService.GetPairedPrintersAsync().ConfigureAwait(false);
+                var activePrinter = _receiptPrinterService.SelectedPrinter ?? printers.FirstOrDefault();
+                var summary = activePrinter != null
+                    ? $"{activePrinter.DeviceName} ({_receiptPrinterService.PaperWidthMillimeters}mm)"
+                    : "Thermal Printer Ready";
 
-            var activeQueue = recent.Where(order =>
-                !order.IsVoided &&
-                (order.PreparationStatus == OrderPreparationStatuses.Preparing ||
-                 order.PreparationStatus == OrderPreparationStatuses.Ready)).ToList();
-            ActiveQueueOrders.ReplaceAll(activeQueue);
-            OnPropertyChanged(nameof(HasActiveQueueOrders));
+                return (loadedProducts, loadedOrders, queue, summary);
+            }).ConfigureAwait(false);
 
-            var printers = await _receiptPrinterService.GetPairedPrintersAsync();
-            var activePrinter = _receiptPrinterService.SelectedPrinter ?? printers.FirstOrDefault();
-            SelectedPrinterStatus = activePrinter != null
-                ? $"{activePrinter.DeviceName} ({_receiptPrinterService.PaperWidthMillimeters}mm)"
-                : "Thermal Printer Ready";
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                OnPropertyChanged(nameof(ActiveBaristaDisplay));
+                _allProducts = products;
+                ApplyProductFilters();
+                RecentCompletedAndVoidedOrders.ReplaceAll(recentOrders);
+                ActiveQueueOrders.ReplaceAll(activeQueue);
+                OnPropertyChanged(nameof(HasActiveQueueOrders));
+                SelectedPrinterStatus = printerSummary;
+            });
+
+            await UpdateSyncStatusAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            await MainThread.InvokeOnMainThreadAsync(() => ErrorMessage = ex.Message);
         }
         finally
         {
-            IsBusy = false;
+            await MainThread.InvokeOnMainThreadAsync(() => IsBusy = false);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShowSyncStatusAsync()
+    {
+        var pending = await _localDatabaseService.GetPendingSyncCountAsync();
+        var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+        var statusMessage = online
+            ? $"Connected to Firebase Realtime Database.\nPending queued operations: {pending}"
+            : $"Device is offline. {pending} operation(s) queued safely in local SQLite.";
+
+        var retry = await _dialogService.ShowConfirmationAsync("Cloud Sync Status", statusMessage, "Retry Sync Now", "Close");
+        if (retry)
+        {
+            await RefreshPointOfSaleDataAsync();
+        }
+    }
+
+    private async Task UpdateSyncStatusAsync()
+    {
+        try
+        {
+            var pending = await _localDatabaseService.GetPendingSyncCountAsync().ConfigureAwait(false);
+            var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (!online)
+                {
+                    SyncStatusText = pending > 0 ? $"Offline ({pending})" : "Offline";
+                    SyncStatusIcon = MaterialIcons.Assets.CloudOff;
+                    SyncStatusColor = Color.FromArgb("#D97706");
+                }
+                else if (pending > 0)
+                {
+                    SyncStatusText = $"Syncing ({pending})";
+                    SyncStatusIcon = MaterialIcons.Assets.Sync;
+                    SyncStatusColor = Color.FromArgb("#0A0A0A");
+                }
+                else
+                {
+                    SyncStatusText = "Synced";
+                    SyncStatusIcon = MaterialIcons.Assets.CloudDone;
+                    SyncStatusColor = Color.FromArgb("#16A34A");
+                }
+            });
+        }
+        catch
+        {
+            // Ignore transient sync badge update errors
         }
     }
 
