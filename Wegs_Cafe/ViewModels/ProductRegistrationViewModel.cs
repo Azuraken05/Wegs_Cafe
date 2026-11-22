@@ -16,6 +16,8 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
     private List<Product> _allProducts = new();
     private CancellationTokenSource? _searchDebounceCts;
+    private CancellationTokenSource? _validationDebounceCts;
+    private bool _hasLoadedInitialData;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -145,17 +147,39 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         }, token);
     }
     partial void OnSelectedFilterCategoryChanged(string value) => ApplyFilters();
-    partial void OnProductNameChanged(string value) => ValidateFormLive();
-    partial void OnStockKeepingUnitChanged(string value) => ValidateFormLive();
+    partial void OnProductNameChanged(string value) => TriggerDebouncedValidation();
+    partial void OnStockKeepingUnitChanged(string value) => TriggerDebouncedValidation();
     partial void OnSelectedCategoryChanged(string value)
     {
         AllowDrinkModifiers = value is ProductCategories.HotCoffee or ProductCategories.IcedCoffee or ProductCategories.NonCoffee;
-        ValidateFormLive();
+        TriggerDebouncedValidation();
     }
-    partial void OnSellingPriceTextChanged(string value) => ValidateFormLive();
-    partial void OnCostPriceTextChanged(string value) => ValidateFormLive();
-    partial void OnStockQuantityTextChanged(string value) => ValidateFormLive();
-    partial void OnLowStockThresholdTextChanged(string value) => ValidateFormLive();
+    partial void OnSellingPriceTextChanged(string value) => TriggerDebouncedValidation();
+    partial void OnCostPriceTextChanged(string value) => TriggerDebouncedValidation();
+    partial void OnStockQuantityTextChanged(string value) => TriggerDebouncedValidation();
+    partial void OnLowStockThresholdTextChanged(string value) => TriggerDebouncedValidation();
+
+    private void TriggerDebouncedValidation()
+    {
+        _validationDebounceCts?.Cancel();
+        _validationDebounceCts = new CancellationTokenSource();
+        var token = _validationDebounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(150, token);
+                if (!token.IsCancellationRequested)
+                {
+                    MainThread.BeginInvokeOnMainThread(ValidateFormLive);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
 
     private void ValidateFormLive()
     {
@@ -184,6 +208,13 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
     [RelayCommand]
     public async Task LoadCatalogAsync()
+    {
+        if (_hasLoadedInitialData || IsBusy) return;
+        _hasLoadedInitialData = true;
+        await RefreshCatalogAsync();
+    }
+
+    public async Task RefreshCatalogAsync()
     {
         if (IsBusy) return;
         ClearError();

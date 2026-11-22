@@ -16,6 +16,7 @@
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray500}}" />
         <Setter Property="StrokeShape" Value="Rectangle"/>
         <Setter Property="StrokeThickness" Value="1"/>
+        <Setter Property="Shadow" Value="{x:Null}" />
     </Style>
 
     <Style TargetType="BoxView">
@@ -296,10 +297,10 @@
     </Style>
 
     <Style TargetType="Shadow">
-        <Setter Property="Radius" Value="15" />
-        <Setter Property="Opacity" Value="0.5" />
-        <Setter Property="Brush" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource White}}" />
-        <Setter Property="Offset" Value="10,10" />
+        <Setter Property="Radius" Value="0" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Brush" Value="Transparent" />
+        <Setter Property="Offset" Value="0,0" />
     </Style>
 
     <Style TargetType="Slider">

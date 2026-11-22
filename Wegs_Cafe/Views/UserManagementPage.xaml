@@ -222,13 +222,9 @@
                            FontSize="16"
                            TextColor="#0A0A0A" />
 
-                    <CollectionView ItemsSource="{Binding UserAccounts}"
-                                    ItemSizingStrategy="MeasureFirstItem"
-                                    SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding UserAccounts}"
+                                         Spacing="10">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:UserAccount">
                                 <Border BackgroundColor="{StaticResource OffWhiteCream}"
                                         Stroke="{StaticResource BorderGray}"
@@ -299,8 +295,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

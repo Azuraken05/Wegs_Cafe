@@ -67,6 +67,7 @@
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="Padding" Value="16" />
+        <Setter Property="Shadow" Value="{x:Null}" />
     </Style>
 
     <Style x:Key="CardSurface" TargetType="Border" BasedOn="{StaticResource Card}" />
@@ -94,6 +95,7 @@
         <Setter Property="helpers:BorderStyleHelper.CornerRadius" Value="16" />
         <Setter Property="StrokeThickness" Value="0" />
         <Setter Property="Padding" Value="16" />
+        <Setter Property="Shadow" Value="{x:Null}" />
     </Style>
 
     <!-- ===== Buttons ===== -->

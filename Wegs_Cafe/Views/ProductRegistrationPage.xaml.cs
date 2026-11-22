@@ -6,7 +6,6 @@ namespace Wegs_Cafe.Views;
 public partial class ProductRegistrationPage : ContentPage
 {
     private readonly ProductRegistrationViewModel _viewModel;
-    private bool _hasAnimated;
 
     public ProductRegistrationPage(ProductRegistrationViewModel viewModel)
     {

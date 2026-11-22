@@ -33,7 +33,8 @@ public class ReceiptDocumentService : IReceiptDocumentService
 
             var pageInfo = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).Create();
             var page = document.StartPage(pageInfo);
-            var canvas = page.Canvas!;
+            var canvas = page?.Canvas;
+            if (canvas == null) return;
 
             using var backgroundPaint = new AG.Paint { Color = AG.Color.White };
             canvas.DrawRect(0, 0, pageWidth, pageHeight, backgroundPaint);

@@ -16,6 +16,7 @@ public partial class InventoryManagementViewModel : BaseViewModel
 
     private List<Product> _allProducts = new();
     private CancellationTokenSource? _searchDebounceCts;
+    private bool _hasLoadedInitialData;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -149,6 +150,13 @@ public partial class InventoryManagementViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadInventoryAsync()
     {
+        if (_hasLoadedInitialData || IsBusy) return;
+        _hasLoadedInitialData = true;
+        await RefreshInventoryAsync();
+    }
+
+    public async Task RefreshInventoryAsync()
+    {
         if (IsBusy) return;
         ClearError();
 
@@ -230,7 +238,7 @@ public partial class InventoryManagementViewModel : BaseViewModel
 
             IsAdjustmentModalVisible = false;
             SelectedAdjustmentProduct = null;
-            await LoadInventoryAsync();
+            await RefreshInventoryAsync();
         }
         catch (Exception ex)
         {

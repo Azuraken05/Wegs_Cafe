@@ -19,9 +19,10 @@ public partial class PointOfSaleViewModel : BaseViewModel
     private readonly IDialogService _dialogService;
 
     private readonly LocalDatabaseService _localDatabaseService;
-    private List<Product> _allProducts = new();
+    private readonly CloudSynchronizationService _cloudSynchronizationService;
+    private List<Product> _allProductsCache = new();
     private CancellationTokenSource? _searchDebounceCts;
-    private bool _isInitialized;
+    private bool _hasLoadedInitialData;
 
     [ObservableProperty]
     private string _syncStatusText = "Synced";
@@ -137,7 +138,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
         OrderCartService orderCartService,
         SessionService sessionService,
         IDialogService dialogService,
-        LocalDatabaseService localDatabaseService)
+        LocalDatabaseService localDatabaseService,
+        CloudSynchronizationService cloudSynchronizationService)
     {
         _productManagementService = productManagementService;
         _orderTransactionService = orderTransactionService;
@@ -147,13 +149,24 @@ public partial class PointOfSaleViewModel : BaseViewModel
         _sessionService = sessionService;
         _dialogService = dialogService;
         _localDatabaseService = localDatabaseService;
+        _cloudSynchronizationService = cloudSynchronizationService;
         PageTitle = "Point of Sale";
 
         _inventoryManagementService.InventoryChanged += async (_, _) => await RefreshPointOfSaleDataAsync();
         _sessionService.ActiveUserChanged += (_, _) => OnPropertyChanged(nameof(ActiveBaristaDisplay));
         _orderCartService.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CanProceedToCheckout));
-        Connectivity.Current.ConnectivityChanged += (_, _) => _ = UpdateSyncStatusAsync();
-        _ = UpdateSyncStatusAsync();
+        _cloudSynchronizationService.SyncStateChanged += OnCloudSyncStateChanged;
+
+        SyncStatusText = _cloudSynchronizationService.StatusText;
+        SyncStatusIcon = _cloudSynchronizationService.StatusIcon;
+        SyncStatusColor = _cloudSynchronizationService.StatusColor;
+    }
+
+    private void OnCloudSyncStateChanged(CloudSyncStatus status, int pendingCount, string statusText, string statusIcon, Color statusColor)
+    {
+        SyncStatusText = statusText;
+        SyncStatusIcon = statusIcon;
+        SyncStatusColor = statusColor;
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -175,7 +188,9 @@ public partial class PointOfSaleViewModel : BaseViewModel
             }
         }, token);
     }
+
     partial void OnSelectedCategoryChanged(string value) => ApplyProductFilters();
+
     partial void OnCustomerOrTableLabelChanged(string value)
     {
         CustomerOrTableError = (value?.Trim().Length ?? 0) < 2
@@ -187,8 +202,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadPointOfSaleDataAsync()
     {
-        if (_isInitialized || IsBusy) return;
-        _isInitialized = true;
+        if (_hasLoadedInitialData || IsBusy) return;
+        _hasLoadedInitialData = true;
         await RefreshPointOfSaleDataAsync();
     }
 
@@ -221,7 +236,7 @@ public partial class PointOfSaleViewModel : BaseViewModel
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 OnPropertyChanged(nameof(ActiveBaristaDisplay));
-                _allProducts = products;
+                _allProductsCache = products;
                 ApplyProductFilters();
                 RecentCompletedAndVoidedOrders.ReplaceAll(recentOrders);
                 ActiveQueueOrders.ReplaceAll(activeQueue);
@@ -229,7 +244,7 @@ public partial class PointOfSaleViewModel : BaseViewModel
                 SelectedPrinterStatus = printerSummary;
             });
 
-            await UpdateSyncStatusAsync().ConfigureAwait(false);
+            _ = _cloudSynchronizationService.SynchronizeAsync();
         }
         catch (Exception ex)
         {
@@ -244,51 +259,17 @@ public partial class PointOfSaleViewModel : BaseViewModel
     [RelayCommand]
     private async Task ShowSyncStatusAsync()
     {
-        var pending = await _localDatabaseService.GetPendingSyncCountAsync();
+        var pending = _cloudSynchronizationService.PendingCount;
         var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
         var statusMessage = online
-            ? $"Connected to Firebase Realtime Database.\nPending queued operations: {pending}"
+            ? $"Connected to Firebase Realtime Database.\nSync status: {_cloudSynchronizationService.CurrentStatus}\nPending queued operations: {pending}"
             : $"Device is offline. {pending} operation(s) queued safely in local SQLite.";
 
-        var retry = await _dialogService.ShowConfirmationAsync("Cloud Sync Status", statusMessage, "Retry Sync Now", "Close");
+        var retry = await _dialogService.ShowConfirmationAsync("Cloud Sync Status", statusMessage, "Sync Now", "Close");
         if (retry)
         {
+            await _cloudSynchronizationService.SynchronizeAsync();
             await RefreshPointOfSaleDataAsync();
-        }
-    }
-
-    private async Task UpdateSyncStatusAsync()
-    {
-        try
-        {
-            var pending = await _localDatabaseService.GetPendingSyncCountAsync().ConfigureAwait(false);
-            var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                if (!online)
-                {
-                    SyncStatusText = pending > 0 ? $"Offline ({pending})" : "Offline";
-                    SyncStatusIcon = MaterialIcons.Assets.CloudOff;
-                    SyncStatusColor = Color.FromArgb("#D97706");
-                }
-                else if (pending > 0)
-                {
-                    SyncStatusText = $"Syncing ({pending})";
-                    SyncStatusIcon = MaterialIcons.Assets.Sync;
-                    SyncStatusColor = Color.FromArgb("#0A0A0A");
-                }
-                else
-                {
-                    SyncStatusText = "Synced";
-                    SyncStatusIcon = MaterialIcons.Assets.CloudDone;
-                    SyncStatusColor = Color.FromArgb("#16A34A");
-                }
-            });
-        }
-        catch
-        {
-            // Ignore transient sync badge update errors
         }
     }
 
@@ -387,19 +368,33 @@ public partial class PointOfSaleViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task ToggleProductSoldOutAsync(Product? product)
+    private async Task ToggleProductAvailabilityAsync(Product? product)
     {
         if (product is null) return;
 
         try
         {
-            await _productManagementService.ToggleProductAvailabilityAsync(product.ProductIdentifier, !product.IsAvailable);
+            var targetStatus = !product.IsAvailable;
+            await _productManagementService.ToggleProductAvailabilityAsync(product.ProductIdentifier, targetStatus);
+            product.IsAvailable = targetStatus;
+
+            var cachedItem = _allProductsCache.FirstOrDefault(p => p.ProductIdentifier == product.ProductIdentifier);
+            if (cachedItem != null)
+            {
+                cachedItem.IsAvailable = targetStatus;
+            }
+
+            ApplyProductFilters();
+            _ = _cloudSynchronizationService.SynchronizeAsync();
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync("Availability Update Failed", ex.Message);
         }
     }
+
+    [RelayCommand]
+    private Task ToggleProductSoldOutAsync(Product? product) => ToggleProductAvailabilityAsync(product);
 
     [RelayCommand]
     private async Task AdvanceOrderPreparationStatusAsync(Order? order)
@@ -603,7 +598,7 @@ public partial class PointOfSaleViewModel : BaseViewModel
     private void ApplyProductFilters()
     {
         var query = SearchQuery?.Trim() ?? string.Empty;
-        var filtered = _allProducts.AsEnumerable();
+        var filtered = _allProductsCache.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(SelectedCategory) &&
             !string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase))

@@ -11,6 +11,8 @@ public partial class UserManagementViewModel : BaseViewModel
     private readonly IUserManagementService _userManagementService;
     private readonly SessionService _sessionService;
     private readonly IDialogService _dialogService;
+    private CancellationTokenSource? _validationDebounceCts;
+    private bool _hasLoadedInitialData;
 
     [ObservableProperty]
     private string _fullName = string.Empty;
@@ -105,16 +107,16 @@ public partial class UserManagementViewModel : BaseViewModel
         ValidateFormLive();
     }
 
-    partial void OnFullNameChanged(string value) => ValidateFormLive();
-    partial void OnEmailAddressChanged(string value) => ValidateFormLive();
-    partial void OnPasswordChanged(string value) => ValidateFormLive();
-    partial void OnSecurityPinChanged(string value) => ValidateFormLive();
-    partial void OnCustomRoleNameChanged(string value) => ValidateFormLive();
-    partial void OnCanAccessPointOfSaleChanged(bool value) => ValidateFormLive();
-    partial void OnCanViewInventoryChanged(bool value) => ValidateFormLive();
-    partial void OnCanRestockInventoryChanged(bool value) => ValidateFormLive();
-    partial void OnCanRegisterProductsChanged(bool value) => ValidateFormLive();
-    partial void OnCanVoidOrdersChanged(bool value) => ValidateFormLive();
+    partial void OnFullNameChanged(string value) => TriggerDebouncedValidation();
+    partial void OnEmailAddressChanged(string value) => TriggerDebouncedValidation();
+    partial void OnPasswordChanged(string value) => TriggerDebouncedValidation();
+    partial void OnSecurityPinChanged(string value) => TriggerDebouncedValidation();
+    partial void OnCustomRoleNameChanged(string value) => TriggerDebouncedValidation();
+    partial void OnCanAccessPointOfSaleChanged(bool value) => TriggerDebouncedValidation();
+    partial void OnCanViewInventoryChanged(bool value) => TriggerDebouncedValidation();
+    partial void OnCanRestockInventoryChanged(bool value) => TriggerDebouncedValidation();
+    partial void OnCanRegisterProductsChanged(bool value) => TriggerDebouncedValidation();
+    partial void OnCanVoidOrdersChanged(bool value) => TriggerDebouncedValidation();
 
     partial void OnSelectedRolePresetChanged(string value)
     {
@@ -143,7 +145,29 @@ public partial class UserManagementViewModel : BaseViewModel
             CustomRoleName = string.Empty;
         }
 
-        ValidateFormLive();
+        TriggerDebouncedValidation();
+    }
+
+    private void TriggerDebouncedValidation()
+    {
+        _validationDebounceCts?.Cancel();
+        _validationDebounceCts = new CancellationTokenSource();
+        var token = _validationDebounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(150, token);
+                if (!token.IsCancellationRequested)
+                {
+                    MainThread.BeginInvokeOnMainThread(ValidateFormLive);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
     }
 
     private UserPermissions BuildCurrentPermissions() => new()
@@ -181,18 +205,20 @@ public partial class UserManagementViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadUserAccountsAsync()
     {
+        if (_hasLoadedInitialData || IsBusy) return;
+        _hasLoadedInitialData = true;
+        await RefreshUserAccountsAsync();
+    }
+
+    public async Task RefreshUserAccountsAsync()
+    {
         if (IsBusy) return;
         ClearError();
 
         try
         {
             IsBusy = true;
-            var accounts = await _userManagementService.GetUserAccountsAsync();
-            UserAccounts.Clear();
-            foreach (var account in accounts)
-                UserAccounts.Add(account);
-
-            ValidateFormLive();
+            await RefreshUserAccountsAsync();
         }
         catch (Exception ex)
         {
@@ -244,12 +270,7 @@ public partial class UserManagementViewModel : BaseViewModel
             SecurityPin = string.Empty;
             SelectedRolePreset = UserRoles.Barista;
 
-            var accounts = await _userManagementService.GetUserAccountsAsync();
-            UserAccounts.Clear();
-            foreach (var account in accounts)
-                UserAccounts.Add(account);
-
-            ValidateFormLive();
+            await RefreshUserAccountsAsync();
 
             await _dialogService.ShowAlertAsync(
                 "Staff Account Created",

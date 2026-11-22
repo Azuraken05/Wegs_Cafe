@@ -5,6 +5,8 @@ using Wegs_Cafe.Services;
 using Wegs_Cafe.ViewModels;
 using Wegs_Cafe.Views;
 
+[assembly: XamlCompilation(XamlCompilationOptions.Compile)]
+
 namespace Wegs_Cafe;
 
 public static class MauiProgram
@@ -35,6 +37,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<LocalDatabaseService>();
         builder.Services.AddSingleton<SessionService>();
         builder.Services.AddSingleton<FirebaseService>();
+        builder.Services.AddSingleton<CloudSynchronizationService>();
         builder.Services.AddSingleton<ApplicationNavigationService>();
         builder.Services.AddSingleton<IAuditTrailService, AuditTrailService>();
 
@@ -55,26 +58,27 @@ public static class MauiProgram
         builder.Services.AddSingleton<IReceiptDocumentService, ReceiptDocumentService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
 
-        // ViewModels
+        // ViewModels (Singletons to leverage 8GB RAM for 0ms screen switching)
+        builder.Services.AddSingleton<AppShellViewModel>();
         builder.Services.AddTransient<AuthenticationViewModel>();
-        builder.Services.AddTransient<SalesAnalyticsDashboardViewModel>();
-        builder.Services.AddTransient<ProductRegistrationViewModel>();
-        builder.Services.AddTransient<InventoryManagementViewModel>();
-        builder.Services.AddTransient<UserManagementViewModel>();
-        builder.Services.AddTransient<AuditTrailViewModel>();
-        builder.Services.AddTransient<PointOfSaleViewModel>();
+        builder.Services.AddSingleton<SalesAnalyticsDashboardViewModel>();
+        builder.Services.AddSingleton<ProductRegistrationViewModel>();
+        builder.Services.AddSingleton<InventoryManagementViewModel>();
+        builder.Services.AddSingleton<UserManagementViewModel>();
+        builder.Services.AddSingleton<AuditTrailViewModel>();
+        builder.Services.AddSingleton<PointOfSaleViewModel>();
         builder.Services.AddTransient<PaymentCheckoutViewModel>();
         builder.Services.AddTransient<ReceiptPreviewViewModel>();
 
-        // Shell & Views
-        builder.Services.AddTransient<AppShell>();
+        // Shell & Views (Pre-warmed Singletons in RAM)
+        builder.Services.AddSingleton<AppShell>();
         builder.Services.AddTransient<AuthenticationPage>();
-        builder.Services.AddTransient<SalesAnalyticsDashboardPage>();
-        builder.Services.AddTransient<ProductRegistrationPage>();
-        builder.Services.AddTransient<InventoryManagementPage>();
-        builder.Services.AddTransient<UserManagementPage>();
-        builder.Services.AddTransient<AuditTrailPage>();
-        builder.Services.AddTransient<PointOfSalePage>();
+        builder.Services.AddSingleton<SalesAnalyticsDashboardPage>();
+        builder.Services.AddSingleton<ProductRegistrationPage>();
+        builder.Services.AddSingleton<InventoryManagementPage>();
+        builder.Services.AddSingleton<UserManagementPage>();
+        builder.Services.AddSingleton<AuditTrailPage>();
+        builder.Services.AddSingleton<PointOfSalePage>();
         builder.Services.AddTransient<PaymentCheckoutPage>();
         builder.Services.AddTransient<ReceiptPreviewPage>();
 

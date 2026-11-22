@@ -4,6 +4,8 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:Wegs_Cafe.Views"
+    xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+    x:DataType="vm:AppShellViewModel"
     Title="Weg's Cafe"
     FlyoutBehavior="Flyout"
     FlyoutWidth="290"
@@ -12,149 +14,504 @@
     Shell.ForegroundColor="{StaticResource PureWhite}"
     Shell.TitleColor="{StaticResource PureWhite}">
 
-    <!-- Monochrome Sidebar Flyout Item Template (OffWhiteCream canvas + PrimaryBlack active item) -->
-    <Shell.ItemTemplate>
-        <DataTemplate>
-            <Grid Padding="14,4">
-                <Border x:Name="FlyoutItemBorder"
-                        StrokeThickness="1"
-                        Stroke="Transparent"
-                        Padding="12,10"
-                        BackgroundColor="Transparent">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="14" />
-                    </Border.StrokeShape>
-                    <VisualStateManager.VisualStateGroups>
-                        <VisualStateGroupList>
-                            <VisualStateGroup x:Name="CommonStates">
-                                <VisualState x:Name="Normal">
-                                    <VisualState.Setters>
-                                        <Setter Property="BackgroundColor" Value="Transparent" />
-                                        <Setter Property="Stroke" Value="Transparent" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                                <VisualState x:Name="Selected">
-                                    <VisualState.Setters>
-                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
-                                        <Setter Property="Stroke" Value="{StaticResource PrimaryBlack}" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateGroupList>
-                    </VisualStateManager.VisualStateGroups>
-                    <Grid ColumnDefinitions="34,*" ColumnSpacing="12" VerticalOptions="Center">
-                        <Border Grid.Column="0"
-                                BackgroundColor="{StaticResource PrimaryBlack}"
-                                WidthRequest="32"
-                                HeightRequest="32"
+    <!-- Custom High-Contrast Sidebar Drawer with Solid Fill Active Highlighting (No Hover Mode) -->
+    <Shell.FlyoutContent>
+        <Grid RowDefinitions="Auto,*,Auto" BackgroundColor="{StaticResource OffWhiteCream}">
+            <!-- ROW 0: High-Contrast Dark Sidebar Header -->
+            <Border Grid.Row="0"
+                    BackgroundColor="#0A0A0A"
+                    StrokeThickness="0"
+                    Padding="18,24,18,16"
+                    Shadow="{x:Null}">
+                <VerticalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                        <Border WidthRequest="44"
+                                HeightRequest="44"
+                                BackgroundColor="#262626"
                                 StrokeThickness="0"
-                                VerticalOptions="Center">
+                                Shadow="{x:Null}">
                             <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="10" />
+                                <RoundRectangle CornerRadius="12" />
                             </Border.StrokeShape>
-                            <Image Source="{Binding FlyoutIcon}"
-                                   WidthRequest="18"
-                                   HeightRequest="18"
+                            <Image Source="wegs_logo.png"
+                                   WidthRequest="36"
+                                   HeightRequest="36"
+                                   Aspect="AspectFit"
                                    HorizontalOptions="Center"
                                    VerticalOptions="Center" />
                         </Border>
-                        <Label Grid.Column="1"
-                               Text="{Binding Title}"
-                               TextColor="{StaticResource PrimaryBlack}"
-                               FontFamily="QuicksandBold"
-                               FontSize="14"
-                               VerticalOptions="Center">
-                            <Label.Triggers>
-                                <DataTrigger TargetType="Label"
-                                             Binding="{Binding Source={x:Reference FlyoutItemBorder}, Path=BackgroundColor}"
-                                             Value="{StaticResource PrimaryBlack}">
-                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
-                                </DataTrigger>
-                            </Label.Triggers>
-                        </Label>
-                    </Grid>
-                </Border>
-            </Grid>
-        </DataTemplate>
-    </Shell.ItemTemplate>
+                        <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                            <Label Text="WEG'S CAFE"
+                                   TextColor="#FFFFFF"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="16"
+                                   CharacterSpacing="1" />
+                            <Border BackgroundColor="#262626"
+                                    Padding="6,2"
+                                    StrokeThickness="0"
+                                    HorizontalOptions="Start"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="6" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding RoleBadge}"
+                                       TextColor="#F7F6F2"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="10"
+                                       FontAttributes="Bold" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </HorizontalStackLayout>
 
-    <Shell.MenuItemTemplate>
-        <DataTemplate>
-            <Grid Padding="14,12">
-                <Border Stroke="{StaticResource StatusDanger}"
+                    <!-- Operator Profile Card -->
+                    <Border BackgroundColor="#18181B"
+                            StrokeThickness="1"
+                            Stroke="#27272A"
+                            Padding="12,8"
+                            Shadow="{x:Null}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10" />
+                        </Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Text="CURRENT OPERATOR"
+                                       TextColor="#A1A1AA"
+                                       FontSize="9"
+                                       FontFamily="QuicksandBold"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding OperatorName}"
+                                       TextColor="#FFFFFF"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+                            <!-- Online Status Indicator -->
+                            <HorizontalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                                <BoxView WidthRequest="7"
+                                         HeightRequest="7"
+                                         CornerRadius="4"
+                                         Color="#16A34A"
+                                         VerticalOptions="Center" />
+                                <Label Text="Online"
+                                       TextColor="#16A34A"
+                                       FontSize="11"
+                                       FontFamily="QuicksandBold"
+                                       VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ROW 1: Navigation Items with Solid Fill Current-Tab Highlighting -->
+            <ScrollView Grid.Row="1" Padding="10,12" VerticalScrollBarVisibility="Never">
+                <VerticalStackLayout Spacing="6">
+
+                    <!-- 1. Point of Sale Tab -->
+                    <Border StrokeThickness="1"
+                            Stroke="Transparent"
+                            BackgroundColor="Transparent"
+                            Padding="12,10"
+                            Shadow="{x:Null}"
+                            IsVisible="{Binding CanAccessPointOfSale}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsPointOfSaleActive}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#0A0A0A" />
+                                <Setter Property="Stroke" Value="#0A0A0A" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsPointOfSaleActive}" Value="False">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToRouteCommand}"
+                                                  CommandParameter="PointOfSalePage" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                            <Border Grid.Column="0"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#EAE7E0"
+                                    VerticalOptions="Center"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsPointOfSaleActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#262626" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsPointOfSaleActive}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#EAE7E0" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Image Source="point_of_sale_dark.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.Triggers>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsPointOfSaleActive}" Value="True">
+                                            <Setter Property="Source" Value="point_of_sale.png" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsPointOfSaleActive}" Value="False">
+                                            <Setter Property="Source" Value="point_of_sale_dark.png" />
+                                        </DataTrigger>
+                                    </Image.Triggers>
+                                </Image>
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="Point of Sale"
+                                   TextColor="#0A0A0A"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="14"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsPointOfSaleActive}" Value="True">
+                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsPointOfSaleActive}" Value="False">
+                                        <Setter Property="TextColor" Value="#0A0A0A" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                    <!-- 2. Product Registration Tab -->
+                    <Border StrokeThickness="1"
+                            Stroke="Transparent"
+                            BackgroundColor="Transparent"
+                            Padding="12,10"
+                            Shadow="{x:Null}"
+                            IsVisible="{Binding CanRegisterProducts}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsProductRegistrationActive}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#0A0A0A" />
+                                <Setter Property="Stroke" Value="#0A0A0A" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsProductRegistrationActive}" Value="False">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToRouteCommand}"
+                                                  CommandParameter="ProductRegistrationPage" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                            <Border Grid.Column="0"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#EAE7E0"
+                                    VerticalOptions="Center"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsProductRegistrationActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#262626" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsProductRegistrationActive}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#EAE7E0" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Image Source="add_box_dark.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.Triggers>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsProductRegistrationActive}" Value="True">
+                                            <Setter Property="Source" Value="add_box.png" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsProductRegistrationActive}" Value="False">
+                                            <Setter Property="Source" Value="add_box_dark.png" />
+                                        </DataTrigger>
+                                    </Image.Triggers>
+                                </Image>
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="Product Registration"
+                                   TextColor="#0A0A0A"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="14"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsProductRegistrationActive}" Value="True">
+                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsProductRegistrationActive}" Value="False">
+                                        <Setter Property="TextColor" Value="#0A0A0A" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                    <!-- 3. Inventory Management Tab -->
+                    <Border StrokeThickness="1"
+                            Stroke="Transparent"
+                            BackgroundColor="Transparent"
+                            Padding="12,10"
+                            Shadow="{x:Null}"
+                            IsVisible="{Binding CanViewInventory}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsInventoryManagementActive}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#0A0A0A" />
+                                <Setter Property="Stroke" Value="#0A0A0A" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsInventoryManagementActive}" Value="False">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToRouteCommand}"
+                                                  CommandParameter="InventoryManagementPage" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                            <Border Grid.Column="0"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#EAE7E0"
+                                    VerticalOptions="Center"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsInventoryManagementActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#262626" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsInventoryManagementActive}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#EAE7E0" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Image Source="inventory_2_dark.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.Triggers>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsInventoryManagementActive}" Value="True">
+                                            <Setter Property="Source" Value="inventory_2.png" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsInventoryManagementActive}" Value="False">
+                                            <Setter Property="Source" Value="inventory_2_dark.png" />
+                                        </DataTrigger>
+                                    </Image.Triggers>
+                                </Image>
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="Inventory Management"
+                                   TextColor="#0A0A0A"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="14"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsInventoryManagementActive}" Value="True">
+                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsInventoryManagementActive}" Value="False">
+                                        <Setter Property="TextColor" Value="#0A0A0A" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                    <!-- 4. User & Role Management Tab -->
+                    <Border StrokeThickness="1"
+                            Stroke="Transparent"
+                            BackgroundColor="Transparent"
+                            Padding="12,10"
+                            Shadow="{x:Null}"
+                            IsVisible="{Binding CanAccessUserManagement}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsUserManagementActive}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#0A0A0A" />
+                                <Setter Property="Stroke" Value="#0A0A0A" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsUserManagementActive}" Value="False">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToRouteCommand}"
+                                                  CommandParameter="UserManagementPage" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                            <Border Grid.Column="0"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#EAE7E0"
+                                    VerticalOptions="Center"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsUserManagementActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#262626" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsUserManagementActive}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#EAE7E0" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Image Source="manage_accounts_dark.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.Triggers>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsUserManagementActive}" Value="True">
+                                            <Setter Property="Source" Value="manage_accounts.png" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsUserManagementActive}" Value="False">
+                                            <Setter Property="Source" Value="manage_accounts_dark.png" />
+                                        </DataTrigger>
+                                    </Image.Triggers>
+                                </Image>
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="User &amp; Role Management"
+                                   TextColor="#0A0A0A"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="14"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsUserManagementActive}" Value="True">
+                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsUserManagementActive}" Value="False">
+                                        <Setter Property="TextColor" Value="#0A0A0A" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- ROW 2: Sign Out Button -->
+            <VerticalStackLayout Grid.Row="2" Spacing="8" Padding="10,8,10,16">
+                <Border Stroke="#DC2626"
                         StrokeThickness="1"
+                        BackgroundColor="#FFF5F5"
                         Padding="12,10"
-                        BackgroundColor="{StaticResource PureWhite}">
+                        Shadow="{x:Null}">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="14" />
+                        <RoundRectangle CornerRadius="12" />
                     </Border.StrokeShape>
-                    <Grid ColumnDefinitions="34,*" ColumnSpacing="12" VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SignOutCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="36,*" ColumnSpacing="12" VerticalOptions="Center">
                         <Border Grid.Column="0"
-                                BackgroundColor="{StaticResource StatusDanger}"
-                                WidthRequest="32"
-                                HeightRequest="32"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                BackgroundColor="#FEE2E2"
                                 StrokeThickness="0"
-                                VerticalOptions="Center">
+                                VerticalOptions="Center"
+                                Shadow="{x:Null}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="10" />
                             </Border.StrokeShape>
-                            <Image Source="{Binding IconImageSource}"
-                                   WidthRequest="18"
-                                   HeightRequest="18"
+                            <Image Source="logout_red.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
                                    HorizontalOptions="Center"
                                    VerticalOptions="Center" />
                         </Border>
                         <Label Grid.Column="1"
-                               Text="{Binding Text}"
-                               TextColor="{StaticResource StatusDanger}"
+                               Text="Sign Out"
+                               TextColor="#DC2626"
                                FontFamily="QuicksandBold"
+                               FontAttributes="Bold"
                                FontSize="14"
                                VerticalOptions="Center" />
                     </Grid>
                 </Border>
-            </Grid>
-        </DataTemplate>
-    </Shell.MenuItemTemplate>
 
-    <!-- 1. Point of Sale (Default Landing Screen for both Owner & Barista) -->
+                <!-- Footer App Brand & Version -->
+                <VerticalStackLayout Spacing="2" Margin="0,4,0,4" HorizontalOptions="Center">
+                    <Label Text="Weg's Cafe Management"
+                           TextColor="#A1A1AA"
+                           FontSize="11"
+                           FontFamily="QuicksandBold"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center" />
+                    <Label Text="v1.0 • Offline Ready"
+                           TextColor="#71717A"
+                           FontSize="10"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutContent>
+
+    <!-- Shell Route Navigation Items (Hidden from Flyout, used for GoToAsync) -->
     <FlyoutItem x:Name="PointOfSaleFlyoutItem"
                 Title="Point of Sale"
-                Icon="point_of_sale.png"
-                Route="PointOfSalePage">
+                Route="PointOfSalePage"
+                FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:PointOfSalePage}"
                       Route="PointOfSalePage" />
     </FlyoutItem>
 
-    <!-- 2. Product Registration (Owner & permitted roles) -->
     <FlyoutItem x:Name="ProductRegistrationFlyoutItem"
                 Title="Product Registration"
-                Icon="add_box.png"
-                Route="ProductRegistrationPage">
+                Route="ProductRegistrationPage"
+                FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:ProductRegistrationPage}"
                       Route="ProductRegistrationPage" />
     </FlyoutItem>
 
-    <!-- 3. Inventory Management (Owner & Barista stock tracking) -->
     <FlyoutItem x:Name="InventoryManagementFlyoutItem"
                 Title="Inventory Management"
-                Icon="inventory_2.png"
-                Route="InventoryManagementPage">
+                Route="InventoryManagementPage"
+                FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:InventoryManagementPage}"
                       Route="InventoryManagementPage" />
     </FlyoutItem>
 
-    <!-- 4. User & Role Management (Owner Only) -->
     <FlyoutItem x:Name="UserManagementFlyoutItem"
                 Title="User &amp; Role Management"
-                Icon="manage_accounts.png"
-                Route="UserManagementPage">
+                Route="UserManagementPage"
+                FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:UserManagementPage}"
                       Route="UserManagementPage" />
     </FlyoutItem>
-
-    <!-- Sign Out Menu Item -->
-    <MenuItem Text="Sign Out"
-              IconImageSource="logout.png"
-              Clicked="OnSignOutClicked" />
 
 </Shell>

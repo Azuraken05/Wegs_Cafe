@@ -56,9 +56,9 @@
                         Text="Orders"
                         ImageSource="receipt_long.png"
                         Style="{StaticResource PrimaryBlackButton}"
-                        HeightRequest="38"
-                        Padding="12,0"
-                        CornerRadius="12"
+                        HeightRequest="34"
+                        Padding="12,4"
+                        CornerRadius="17"
                         FontSize="12"
                         Command="{Binding ToggleOrderHistoryPanelCommand}" />
 
@@ -67,9 +67,9 @@
                         Text="Printer"
                         ImageSource="print.png"
                         Style="{StaticResource PrimaryBlackButton}"
-                        HeightRequest="38"
-                        Padding="12,0"
-                        CornerRadius="12"
+                        HeightRequest="34"
+                        Padding="12,4"
+                        CornerRadius="17"
                         FontSize="12"
                         Command="{Binding ConfigureBluetoothPrinterCommand}" />
             </Grid>
@@ -178,11 +178,13 @@
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:Product">
-                            <Border BackgroundColor="{StaticResource OffWhiteCream}"
-                                    Stroke="{StaticResource BorderGray}"
+                            <Border StrokeShape="RoundRectangle 14"
                                     StrokeThickness="1"
-                                    Padding="12">
-                                <Border.StrokeShape><RoundRectangle CornerRadius="16" /></Border.StrokeShape>
+                                    Stroke="#E2E2E0"
+                                    BackgroundColor="#F7F6F2"
+                                    Padding="10"
+                                    HeightRequest="142"
+                                    Shadow="{x:Null}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
                                         <Setter Property="Opacity" Value="0.55" />
@@ -192,86 +194,100 @@
                                     <TapGestureRecognizer Tapped="OnProductCardTapped" />
                                 </Border.GestureRecognizers>
 
-                                <VerticalStackLayout Spacing="6">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Border Grid.Column="0"
-                                                BackgroundColor="{StaticResource PureWhite}"
-                                                Padding="7,2"
-                                                StrokeThickness="0"
-                                                HorizontalOptions="Start">
-                                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                            <Label Text="{Binding Category}"
-                                                   FontFamily="InterSemiBold"
-                                                   FontSize="10"
-                                                   TextColor="{StaticResource MutedText}"
-                                                   LineBreakMode="TailTruncation" />
-                                        </Border>
+                                <Grid RowDefinitions="Auto,*,Auto,Auto"
+                                      ColumnDefinitions="*,Auto"
+                                      RowSpacing="4">
+                                    <!-- Row 0, Col 0: Category badge -->
+                                    <Border Grid.Row="0"
+                                            Grid.Column="0"
+                                            BackgroundColor="{StaticResource PureWhite}"
+                                            Padding="6,2"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="Start"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="6" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding Category}"
+                                               FontFamily="InterSemiBold"
+                                               FontSize="10"
+                                               TextColor="#52525B"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="1"
+                                               HorizontalOptions="Start" />
+                                    </Border>
 
-                                        <Border Grid.Column="1"
-                                                BackgroundColor="{StaticResource StatusSuccess}"
-                                                Padding="7,2"
-                                                StrokeThickness="0">
-                                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                            <Border.Triggers>
-                                                <DataTrigger TargetType="Border" Binding="{Binding IsLowStock}" Value="True">
-                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
+                                    <!-- Row 0, Col 1: Compact interactive Stock/Availability pill -->
+                                    <Border Grid.Row="0"
+                                            Grid.Column="1"
+                                            Padding="8,2"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="10" />
+                                        </Border.StrokeShape>
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="#16A34A" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                                <Setter Property="BackgroundColor" Value="#DC2626" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PointOfSaleViewModel}}, Path=ToggleProductAvailabilityCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label FontFamily="QuicksandBold"
+                                               FontSize="10"
+                                               TextColor="{StaticResource PureWhite}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="True">
+                                                    <Setter Property="Text" Value="In Stock" />
                                                 </DataTrigger>
-                                                <DataTrigger TargetType="Border" Binding="{Binding IsOutOfStock}" Value="True">
-                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="Text" Value="Sold Out" />
                                                 </DataTrigger>
-                                                <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
-                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
-                                                </DataTrigger>
-                                            </Border.Triggers>
-                                            <Label Text="{Binding StockStatusText}"
-                                                   FontFamily="QuicksandBold"
-                                                   FontSize="9.5"
-                                                   TextColor="{StaticResource PureWhite}" />
-                                        </Border>
-                                    </Grid>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Border>
 
-                                    <Label Text="{Binding ProductName}"
+                                    <!-- Row 1, Col 0-1: ProductName -->
+                                    <Label Grid.Row="1"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding ProductName}"
                                            FontFamily="QuicksandBold"
                                            FontSize="14"
-                                           TextColor="{StaticResource PrimaryBlack}"
+                                           FontAttributes="Bold"
+                                           TextColor="#0A0A0A"
+                                           MaxLines="2"
                                            LineBreakMode="TailTruncation"
-                                           MaxLines="2" />
+                                           VerticalOptions="Start" />
 
-                                    <Label Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}"
-                                           Style="{StaticResource MutedCaption}"
-                                           FontSize="11" />
+                                    <!-- Row 2, Col 0-1: Stock count -->
+                                    <Label Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding StockQuantity, StringFormat='Stock: {0}'}"
+                                           FontFamily="InterRegular"
+                                           FontSize="11"
+                                           TextColor="#52525B"
+                                           VerticalOptions="Center" />
 
-                                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="End" Margin="0,2,0,0">
-                                        <Label Grid.Column="0"
-                                               Text="{Binding SellingPrice, Converter={StaticResource CurrencyConverter}}"
-                                               FontFamily="QuicksandBold"
-                                               FontSize="16"
-                                               TextColor="{StaticResource PrimaryBlack}"
-                                               VerticalOptions="Center" />
+                                    <!-- Row 3, Col 0-1: Full unclipped Selling Price -->
+                                    <Label Grid.Row="3"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding SellingPrice, StringFormat='₱{0:F2}'}"
+                                           FontFamily="QuicksandBold"
+                                           FontSize="15"
+                                           FontAttributes="Bold"
+                                           TextColor="#0A0A0A"
+                                           VerticalOptions="End" />
+                                </Grid>
 
-                                        <Button Grid.Column="1"
-                                                Text="Sold Out"
-                                                BackgroundColor="{StaticResource PureWhite}"
-                                                TextColor="{StaticResource StatusDanger}"
-                                                BorderColor="{StaticResource StatusDanger}"
-                                                BorderWidth="1"
-                                                FontFamily="QuicksandBold"
-                                                FontSize="10"
-                                                CornerRadius="10"
-                                                HeightRequest="28"
-                                                Padding="8,0"
-                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.ToggleProductSoldOutCommand}"
-                                                CommandParameter="{Binding .}">
-                                            <Button.Triggers>
-                                                <DataTrigger TargetType="Button" Binding="{Binding IsAvailable}" Value="False">
-                                                    <Setter Property="Text" Value="Enable" />
-                                                    <Setter Property="TextColor" Value="{StaticResource StatusSuccess}" />
-                                                    <Setter Property="BorderColor" Value="{StaticResource StatusSuccess}" />
-                                                </DataTrigger>
-                                            </Button.Triggers>
-                                        </Button>
-                                    </Grid>
-                                </VerticalStackLayout>
                             </Border>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>

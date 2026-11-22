@@ -297,13 +297,9 @@
                     </ScrollView>
 
                     <!-- Product List (Non-overlapping 2-row Grid with CompactCardButtonStyle) -->
-                    <CollectionView ItemsSource="{Binding FilteredProducts}"
-                                    ItemSizingStrategy="MeasureFirstItem"
-                                    SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredProducts}"
+                                         Spacing="10">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:Product">
                                 <Border BackgroundColor="{StaticResource OffWhiteCream}"
                                         Stroke="{StaticResource BorderGray}"
@@ -384,8 +380,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

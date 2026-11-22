@@ -6,7 +6,6 @@ namespace Wegs_Cafe.Views;
 public partial class InventoryManagementPage : ContentPage
 {
     private readonly InventoryManagementViewModel _viewModel;
-    private bool _hasAnimated;
 
     public InventoryManagementPage(InventoryManagementViewModel viewModel)
     {
