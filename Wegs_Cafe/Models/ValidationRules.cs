@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Wegs_Cafe.Models;
@@ -120,13 +121,17 @@ public static partial class ValidationRules
         if (string.IsNullOrWhiteSpace(category))
             summary.AddError("Category", "Category selection is required.");
 
-        var hasSellingPrice = decimal.TryParse(sellingPriceText, out var sellingPrice) && sellingPrice > 0m;
+        var hasSellingPrice = decimal.TryParse(
+            sellingPriceText?.Trim(),
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            out var sellingPrice) && sellingPrice > 0m;
         if (!hasSellingPrice)
             summary.AddError("SellingPrice", "Selling Price must be greater than ₱0.00.");
 
         if (!string.IsNullOrWhiteSpace(costPriceText))
         {
-            if (!decimal.TryParse(costPriceText, out var costPrice) || costPrice < 0m)
+            if (!decimal.TryParse(costPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var costPrice) || costPrice < 0m)
             {
                 summary.AddError("CostPrice", "Cost Price must be ₱0.00 or greater.");
             }
@@ -136,10 +141,10 @@ public static partial class ValidationRules
             }
         }
 
-        if (!int.TryParse(initialStockText, out var initialStock) || initialStock < 0)
+        if (!int.TryParse(initialStockText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var initialStock) || initialStock < 0)
             summary.AddError("StockQuantity", "Initial Stock Quantity must be 0 or greater.");
 
-        if (!int.TryParse(lowStockThresholdText, out var threshold) || threshold < 1)
+        if (!int.TryParse(lowStockThresholdText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var threshold) || threshold < 1)
             summary.AddError("LowStockThreshold", "Low-Stock Threshold must be 1 or greater.");
 
         return summary;

@@ -11,9 +11,8 @@ public partial class PaymentCheckoutPage : ContentPage
         BindingContext = viewModel;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await AnimationHelper.AnimateEntranceAsync(CheckoutCard);
     }
 }

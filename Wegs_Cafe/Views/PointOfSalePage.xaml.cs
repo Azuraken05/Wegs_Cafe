@@ -7,7 +7,6 @@ namespace Wegs_Cafe.Views;
 public partial class PointOfSalePage : ContentPage
 {
     private readonly PointOfSaleViewModel _viewModel;
-    private bool _hasAnimated;
 
     public PointOfSalePage(PointOfSaleViewModel viewModel)
     {
@@ -17,15 +16,10 @@ public partial class PointOfSalePage : ContentPage
         _viewModel.DrinkModifierModalRequested += OnDrinkModifierModalRequested;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadPointOfSaleDataCommand.ExecuteAsync(null);
-        if (!_hasAnimated)
-        {
-            _hasAnimated = true;
-            await AnimationHelper.AnimateEntranceAsync(PointOfSaleContainer, 150);
-        }
+        _ = _viewModel.LoadPointOfSaleDataCommand.ExecuteAsync(null);
     }
 
     private async void OnDrinkModifierModalRequested(object? sender, EventArgs e)

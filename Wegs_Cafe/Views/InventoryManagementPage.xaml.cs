@@ -15,14 +15,9 @@ public partial class InventoryManagementPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadInventoryCommand.ExecuteAsync(null);
-        if (!_hasAnimated)
-        {
-            _hasAnimated = true;
-            await AnimationHelper.AnimateEntranceAsync(InventoryContainer, 150);
-        }
+        _ = _viewModel.LoadInventoryCommand.ExecuteAsync(null);
     }
 }

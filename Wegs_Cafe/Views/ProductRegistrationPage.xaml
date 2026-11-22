@@ -11,19 +11,19 @@
 
     <ScrollView>
         <Grid x:Name="ProductPageContainer"
-              Padding="20"
+              Padding="16"
               ColumnDefinitions="{OnIdiom Phone='*', Tablet='440,*', Desktop='460,*'}"
               RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
-              ColumnSpacing="18"
-              RowSpacing="18">
+              ColumnSpacing="16"
+              RowSpacing="16">
 
-            <!-- Left Column: Product Registration / Update Form with Real-Time Validation -->
-            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="20" VerticalOptions="Start">
-                <VerticalStackLayout Spacing="14">
+            <!-- Left Column: Product Registration / Update Form -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="16" VerticalOptions="Start">
+                <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding FormSectionTitle}"
                            FontFamily="QuicksandBold"
-                           FontSize="18"
-                           TextColor="{StaticResource PrimaryBlack}" />
+                           FontSize="17"
+                           TextColor="#0A0A0A" />
 
                     <Border BackgroundColor="#FEF2F2"
                             Stroke="{StaticResource StatusDanger}"
@@ -36,41 +36,42 @@
                     <!-- Product Image Preview & Upload Controls -->
                     <Border BackgroundColor="{StaticResource OffWhiteCream}"
                             Stroke="{StaticResource BorderGray}"
-                            Padding="14">
+                            Padding="12">
                         <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
                         <VerticalStackLayout Spacing="10">
-                            <Grid HeightRequest="130">
+                            <Grid HeightRequest="120">
                                 <Image Source="{Binding ImageUrl, Converter={StaticResource ImagePathConverter}}"
                                        Aspect="AspectFill"
-                                       HeightRequest="130"
+                                       HeightRequest="120"
                                        IsVisible="{Binding HasSelectedImage}" />
                                 <VerticalStackLayout VerticalOptions="Center"
                                                      HorizontalOptions="Center"
                                                      Spacing="6"
                                                      IsVisible="{Binding HasSelectedImage, Converter={StaticResource InverseBoolConverter}}">
-                                    <Border BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="42" HeightRequest="42" StrokeThickness="0" HorizontalOptions="Center">
-                                        <Border.StrokeShape><RoundRectangle CornerRadius="21" /></Border.StrokeShape>
-                                        <Image Source="add_a_photo.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    <Border BackgroundColor="#0A0A0A" WidthRequest="40" HeightRequest="40" StrokeThickness="0" HorizontalOptions="Center">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
+                                        <Image Source="add_a_photo.png" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" />
                                     </Border>
                                     <Label Text="Product Photo (.jpg, .png, .webp under 5 MB)"
-                                           Style="{StaticResource MutedCaption}"
+                                           FontSize="11.5"
+                                           TextColor="#52525B"
                                            HorizontalOptions="Center" />
                                 </VerticalStackLayout>
                             </Grid>
 
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                 <Button Grid.Column="0"
                                         Text="Gallery Photo"
-                                        Style="{StaticResource OutlineSecondaryButton}"
+                                        Style="{StaticResource SecondaryActionButtonStyle}"
                                         HeightRequest="38"
-                                        FontSize="12"
+                                        MinimumHeightRequest="38"
                                         Command="{Binding PickImageFromGalleryCommand}" />
                                 <Button Grid.Column="1"
                                         Text="Camera Photo"
-                                        Style="{StaticResource PrimaryBlackButton}"
-                                        ImageSource="add_a_photo.png"
+                                        Style="{StaticResource PrimaryActionButtonStyle}"
                                         HeightRequest="38"
-                                        FontSize="12"
+                                        MinimumHeightRequest="38"
+                                        ImageSource="add_a_photo.png"
                                         Command="{Binding CaptureImageWithCameraCommand}" />
                             </Grid>
                         </VerticalStackLayout>
@@ -78,7 +79,7 @@
 
                     <!-- Product Name -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Product Name (2 to 80 chars)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Product Name (2 to 80 chars)" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                         <Border Style="{StaticResource InputFieldBorder}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasProductNameError}" Value="True">
@@ -86,7 +87,11 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding ProductName}" Placeholder="e.g. Iced Spanish Latte" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding ProductName}"
+                                   Placeholder="e.g. Iced Spanish Latte"
+                                   TextColor="#0A0A0A"
+                                   PlaceholderColor="#52525B"
+                                   BackgroundColor="Transparent" />
                         </Border>
                         <HorizontalStackLayout Spacing="6" IsVisible="{Binding HasProductNameError}">
                             <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="16" HeightRequest="16" StrokeThickness="0">
@@ -100,7 +105,7 @@
                     <!-- SKU & Category -->
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Stock Keeping Unit (SKU)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Stock Keeping Unit (SKU)" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasStockKeepingUnitError}" Value="True">
@@ -108,17 +113,22 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding StockKeepingUnit}" Placeholder="WEGS-ESP-01" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding StockKeepingUnit}"
+                                       Placeholder="WEGS-ESP-01"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding StockKeepingUnitError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasStockKeepingUnitError}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Category" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Category" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Picker ItemsSource="{Binding AvailableCategories}"
                                         SelectedItem="{Binding SelectedCategory}"
-                                        TextColor="{StaticResource PrimaryBlack}" />
+                                        TextColor="#0A0A0A"
+                                        TitleColor="#0A0A0A" />
                             </Border>
                         </VerticalStackLayout>
                     </Grid>
@@ -126,7 +136,7 @@
                     <!-- Selling Price & Cost Price -->
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Selling Price (₱)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Selling Price (₱)" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasSellingPriceError}" Value="True">
@@ -134,13 +144,18 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding SellingPriceText}" Keyboard="Numeric" Placeholder="155.00" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding SellingPriceText}"
+                                       Keyboard="Numeric"
+                                       Placeholder="155.00"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding SellingPriceError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasSellingPriceError}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Cost Price (₱)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Cost Price (₱)" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasCostPriceError}" Value="True">
@@ -148,7 +163,12 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding CostPriceText}" Keyboard="Numeric" Placeholder="52.00" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding CostPriceText}"
+                                       Keyboard="Numeric"
+                                       Placeholder="0.00"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding CostPriceError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasCostPriceError}" />
                         </VerticalStackLayout>
@@ -157,7 +177,7 @@
                     <!-- Initial Stock, Low Threshold & Unit -->
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Initial Stock" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Initial Stock" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasStockQuantityError}" Value="True">
@@ -165,13 +185,18 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding StockQuantityText}" Keyboard="Numeric" Placeholder="25" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding StockQuantityText}"
+                                       Keyboard="Numeric"
+                                       Placeholder="25"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding StockQuantityError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasStockQuantityError}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Low Threshold" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Low Threshold" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
                                 <Border.Triggers>
                                     <DataTrigger TargetType="Border" Binding="{Binding HasLowStockThresholdError}" Value="True">
@@ -179,30 +204,39 @@
                                         <Setter Property="StrokeThickness" Value="1.5" />
                                     </DataTrigger>
                                 </Border.Triggers>
-                                <Entry Text="{Binding LowStockThresholdText}" Keyboard="Numeric" Placeholder="10" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding LowStockThresholdText}"
+                                       Keyboard="Numeric"
+                                       Placeholder="10"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                             <Label Text="{Binding LowStockThresholdError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasLowStockThresholdError}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="2" Spacing="4">
-                            <Label Text="Unit" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Unit" FontFamily="InterSemiBold" FontSize="12" TextColor="#0A0A0A" />
                             <Border Style="{StaticResource InputFieldBorder}">
-                                <Entry Text="{Binding MeasurementUnit}" Placeholder="cups" BackgroundColor="Transparent" />
+                                <Entry Text="{Binding MeasurementUnit}"
+                                       Placeholder="cups"
+                                       TextColor="#0A0A0A"
+                                       PlaceholderColor="#52525B"
+                                       BackgroundColor="Transparent" />
                             </Border>
                         </VerticalStackLayout>
                     </Grid>
 
-                    <!-- Barista Drink Modifiers & Availability -->
+                    <!-- Barista Drink Modifiers & Availability (Explicit #0A0A0A text) -->
                     <Border BackgroundColor="{StaticResource OffWhiteCream}" Stroke="{StaticResource BorderGray}" Padding="12,10">
                         <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
                         <VerticalStackLayout Spacing="8">
                             <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                <Label Grid.Column="0" Text="Allow Barista Drink Modifiers (Size, Ice, Sweetness)" FontFamily="InterSemiBold" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding AllowDrinkModifiers}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Allow Barista Drink Modifiers (Size, Ice, Sweetness)" FontFamily="InterSemiBold" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding AllowDrinkModifiers}" OnColor="#0A0A0A" />
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                <Label Grid.Column="0" Text="Available for POS Ordering" FontFamily="InterSemiBold" FontSize="12" VerticalOptions="Center" />
-                                <Switch Grid.Column="1" IsToggled="{Binding IsAvailable}" OnColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="0" Text="Available for POS Ordering" FontFamily="InterSemiBold" FontSize="13" TextColor="#0A0A0A" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding IsAvailable}" OnColor="#0A0A0A" />
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
@@ -210,12 +244,12 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                         <Button Grid.Column="0"
                                 Text="{Binding SaveButtonLabel}"
-                                Style="{StaticResource PrimaryBlackButton}"
+                                Style="{StaticResource PrimaryActionButtonStyle}"
                                 IsEnabled="{Binding CanSubmitForm}"
                                 Command="{Binding SaveProductCommand}" />
                         <Button Grid.Column="1"
                                 Text="Reset"
-                                Style="{StaticResource OutlineSecondaryButton}"
+                                Style="{StaticResource SecondaryActionButtonStyle}"
                                 Command="{Binding ResetProductFormCommand}" />
                     </Grid>
                 </VerticalStackLayout>
@@ -225,17 +259,17 @@
             <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
                     Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
                     Style="{StaticResource CardSurface}"
-                    Padding="20">
-                <VerticalStackLayout Spacing="14">
+                    Padding="16">
+                <VerticalStackLayout Spacing="12">
                     <Label Text="REGISTERED MENU CATALOG"
                            FontFamily="QuicksandBold"
-                           FontSize="18"
-                           TextColor="{StaticResource PrimaryBlack}" />
+                           FontSize="17"
+                           TextColor="#0A0A0A" />
 
                     <!-- Search Bar -->
                     <Border Style="{StaticResource SearchPillBorder}">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
+                            <Border Grid.Column="0" BackgroundColor="#0A0A0A" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
                                 <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
                                 <Image Source="search.png" WidthRequest="15" HeightRequest="15" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
@@ -243,21 +277,18 @@
                                    Text="{Binding SearchQuery}"
                                    Placeholder="Search product name, SKU, or category..."
                                    BackgroundColor="Transparent"
-                                   TextColor="{StaticResource PrimaryBlack}" />
+                                   TextColor="#0A0A0A"
+                                   PlaceholderColor="#52525B" />
                         </Grid>
                     </Border>
 
-                    <!-- Category Filter Pills -->
+                    <!-- Compact Category Filter Pills -->
                     <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                         <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding FilterCategories}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="x:String">
                                     <Button Text="{Binding .}"
-                                            Style="{StaticResource OutlineSecondaryButton}"
-                                            HeightRequest="36"
-                                            Padding="14,0"
-                                            CornerRadius="18"
-                                            FontSize="12"
+                                            Style="{StaticResource FilterChipStyle}"
                                             Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.SelectFilterCategoryCommand}"
                                             CommandParameter="{Binding .}" />
                                 </DataTemplate>
@@ -265,8 +296,10 @@
                         </HorizontalStackLayout>
                     </ScrollView>
 
-                    <!-- Product List -->
-                    <CollectionView ItemsSource="{Binding FilteredProducts}" SelectionMode="None">
+                    <!-- Product List (Non-overlapping 2-row Grid with CompactCardButtonStyle) -->
+                    <CollectionView ItemsSource="{Binding FilteredProducts}"
+                                    ItemSizingStrategy="MeasureFirstItem"
+                                    SelectionMode="None">
                         <CollectionView.ItemsLayout>
                             <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
                         </CollectionView.ItemsLayout>
@@ -274,58 +307,80 @@
                             <DataTemplate x:DataType="models:Product">
                                 <Border BackgroundColor="{StaticResource OffWhiteCream}"
                                         Stroke="{StaticResource BorderGray}"
-                                        Padding="14,12">
+                                        StrokeThickness="1"
+                                        Padding="12">
                                     <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
-                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
-                                        <VerticalStackLayout Grid.Column="0" Spacing="3">
-                                            <HorizontalStackLayout Spacing="8">
-                                                <Label Text="{Binding ProductName}"
-                                                       FontFamily="QuicksandBold"
-                                                       FontSize="15"
-                                                       TextColor="{StaticResource PrimaryBlack}" />
-                                                <Border BackgroundColor="{StaticResource PureWhite}"
-                                                        Stroke="{StaticResource BorderGray}"
-                                                        Padding="8,2">
-                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                                    <Label Text="{Binding Category}" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource MutedText}" />
-                                                </Border>
-                                            </HorizontalStackLayout>
+                                    <Grid RowDefinitions="Auto,Auto"
+                                          ColumnDefinitions="*,Auto"
+                                          RowSpacing="6"
+                                          ColumnSpacing="8">
 
+                                        <!-- Row 0, Col 0: Product Name -->
+                                        <Label Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="{Binding ProductName}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               TextColor="#0A0A0A"
+                                               MaxLines="1"
+                                               LineBreakMode="TailTruncation"
+                                               VerticalOptions="Center" />
+
+                                        <!-- Row 0, Col 1: Compact Category Badge -->
+                                        <Border Grid.Row="0"
+                                                Grid.Column="1"
+                                                BackgroundColor="#E4E4E7"
+                                                StrokeThickness="0"
+                                                Padding="8,2"
+                                                HorizontalOptions="End"
+                                                VerticalOptions="Center">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                            <Label Text="{Binding Category}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="10"
+                                                   TextColor="#0A0A0A" />
+                                        </Border>
+
+                                        <!-- Row 1, Col 0: SKU + Pricing & Stock -->
+                                        <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="2" VerticalOptions="Center">
                                             <Label Text="{Binding StockKeepingUnit, StringFormat='SKU: {0}'}"
-                                                   Style="{StaticResource MutedCaption}" />
-
-                                            <HorizontalStackLayout Spacing="14">
-                                                <Label Text="{Binding SellingPrice, Converter={StaticResource CurrencyConverter}, StringFormat='Selling: {0}'}"
-                                                       FontFamily="InterSemiBold"
-                                                       FontSize="12"
-                                                       TextColor="{StaticResource PrimaryBlack}" />
-                                                <Label Text="{Binding CostPrice, Converter={StaticResource CurrencyConverter}, StringFormat='Cost: {0}'}"
-                                                       Style="{StaticResource MutedCaption}" />
-                                                <Label Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}"
-                                                       FontFamily="InterSemiBold"
-                                                       FontSize="12"
-                                                       TextColor="{StaticResource PrimaryBlack}" />
-                                            </HorizontalStackLayout>
+                                                   FontSize="11"
+                                                   TextColor="#52525B" />
+                                            <Label FontSize="11" TextColor="#0A0A0A">
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding SellingPrice, StringFormat='Sell: ₱{0:N2}'}" />
+                                                        <Span Text=" | " TextColor="#71717A" />
+                                                        <Span Text="{Binding CostPrice, StringFormat='Cost: ₱{0:N2}'}" />
+                                                        <Span Text=" | " TextColor="#71717A" />
+                                                        <Span Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}" FontAttributes="Bold" />
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
                                         </VerticalStackLayout>
 
-                                        <Button Grid.Column="1"
-                                                Text="Edit"
-                                                ImageSource="edit.png"
-                                                Style="{StaticResource PrimaryBlackButton}"
-                                                HeightRequest="36"
-                                                Padding="12,0"
-                                                FontSize="12"
-                                                Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.EditProductCommand}"
-                                                CommandParameter="{Binding .}" />
+                                        <!-- Row 1, Col 1: Compact Inline Edit & Delete Buttons -->
+                                        <HorizontalStackLayout Grid.Row="1"
+                                                               Grid.Column="1"
+                                                               Spacing="6"
+                                                               VerticalOptions="Center"
+                                                               HorizontalOptions="End">
+                                            <Button Text="Edit"
+                                                    Style="{StaticResource CompactCardButtonStyle}"
+                                                    BackgroundColor="#0A0A0A"
+                                                    TextColor="#FFFFFF"
+                                                    Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.EditProductCommand}"
+                                                    CommandParameter="{Binding .}" />
 
-                                        <Button Grid.Column="2"
-                                                Text="Delete"
-                                                Style="{StaticResource DangerButton}"
-                                                HeightRequest="36"
-                                                Padding="12,0"
-                                                FontSize="12"
-                                                Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.DeleteProductCommand}"
-                                                CommandParameter="{Binding .}" />
+                                            <Button Text="Delete"
+                                                    Style="{StaticResource CompactCardButtonStyle}"
+                                                    BackgroundColor="#DC2626"
+                                                    TextColor="#FFFFFF"
+                                                    Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.DeleteProductCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
                                     </Grid>
                                 </Border>
                             </DataTemplate>

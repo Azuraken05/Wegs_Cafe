@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wegs_Cafe.Helpers;
@@ -330,10 +331,10 @@ public partial class ProductRegistrationViewModel : BaseViewModel
                 StockKeepingUnit = StockKeepingUnit.Trim().ToUpperInvariant(),
                 ProductName = ProductName.Trim(),
                 Category = SelectedCategory,
-                SellingPrice = decimal.Parse(SellingPriceText),
-                CostPrice = string.IsNullOrWhiteSpace(CostPriceText) ? 0m : decimal.Parse(CostPriceText),
-                StockQuantity = int.Parse(StockQuantityText),
-                LowStockThreshold = int.Parse(LowStockThresholdText),
+                SellingPrice = decimal.Parse(SellingPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture),
+                CostPrice = string.IsNullOrWhiteSpace(CostPriceText) ? 0m : decimal.Parse(CostPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture),
+                StockQuantity = int.Parse(StockQuantityText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture),
+                LowStockThreshold = int.Parse(LowStockThresholdText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture),
                 MeasurementUnit = string.IsNullOrWhiteSpace(MeasurementUnit) ? "cups" : MeasurementUnit.Trim(),
                 AllowDrinkModifiers = AllowDrinkModifiers,
                 ImageUrl = ImageUrl,
