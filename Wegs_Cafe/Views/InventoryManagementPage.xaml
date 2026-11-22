@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.InventoryManagementPage"
+             x:DataType="vm:InventoryManagementViewModel"
+             x:Name="InventoryPageRoot"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <VerticalStackLayout x:Name="InventoryContainer" Padding="20" Spacing="18">
+
+            <!-- Summary KPI Strip -->
+            <Grid ColumnDefinitions="{OnIdiom Phone='*,*', Tablet='*,*,*,*', Desktop='*,*,*,*'}"
+                  RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
+                  ColumnSpacing="14"
+                  RowSpacing="14">
+
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource DarkCardSurface}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="TOTAL STOCK VALUATION" FontFamily="InterSemiBold" FontSize="11" TextColor="#A1A1AA" />
+                        <Label Text="{Binding TotalStockValuation, Converter={StaticResource CurrencyConverter}}"
+                               FontFamily="QuicksandBold" FontSize="24" TextColor="{StaticResource PureWhite}" />
+                        <Label Text="Based on unit cost price" FontFamily="InterRegular" FontSize="12" TextColor="#D4D4D8" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="REGISTERED PRODUCTS" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource MutedText}" />
+                        <Label Text="{Binding TotalProductCount}" FontFamily="QuicksandBold" FontSize="24" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Active SKU records" Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                        Grid.Column="{OnIdiom Phone=0, Tablet=2, Desktop=2}"
+                        Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="LOW STOCK ALERTS" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource StatusWarning}" />
+                        <Label Text="{Binding LowStockCount}" FontFamily="QuicksandBold" FontSize="24" TextColor="{StaticResource StatusWarning}" />
+                        <Label Text="At or below threshold" Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                        Grid.Column="{OnIdiom Phone=1, Tablet=3, Desktop=3}"
+                        Style="{StaticResource CardSurface}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="OUT OF STOCK" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource StatusDanger}" />
+                        <Label Text="{Binding OutOfStockCount}" FontFamily="QuicksandBold" FontSize="24" TextColor="{StaticResource StatusDanger}" />
+                        <Label Text="Requires immediate replenishment" Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Stock Controls & Filter Bar -->
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0"
+                               Text="STOCK QUANTITY &amp; REPLENISHMENT CONTROLS"
+                               FontFamily="QuicksandBold"
+                               FontSize="18"
+                               TextColor="{StaticResource PrimaryBlack}"
+                               VerticalOptions="Center" />
+
+                        <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                            <Button Text="All Items"
+                                    HeightRequest="38"
+                                    Padding="14,0"
+                                    CornerRadius="19"
+                                    Command="{Binding SelectStockFilterCommand}"
+                                    CommandParameter="All">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsAllFilterSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsAllFilterSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+
+                            <Button Text="Low Stock"
+                                    HeightRequest="38"
+                                    Padding="14,0"
+                                    CornerRadius="19"
+                                    Command="{Binding SelectStockFilterCommand}"
+                                    CommandParameter="Low Stock">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsLowStockFilterSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsLowStockFilterSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+
+                            <Button Text="Out of Stock"
+                                    HeightRequest="38"
+                                    Padding="14,0"
+                                    CornerRadius="19"
+                                    Command="{Binding SelectStockFilterCommand}"
+                                    CommandParameter="Out of Stock">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsOutOfStockFilterSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsOutOfStockFilterSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <Border Style="{StaticResource SearchPillBorder}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                <Image Source="search.png" WidthRequest="15" HeightRequest="15" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchQuery}"
+                                   Placeholder="Filter inventory by product name, SKU, or category..."
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Inventory Product List -->
+                    <CollectionView ItemsSource="{Binding FilteredProducts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Product">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,12">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="3">
+                                            <Label Text="{Binding ProductName}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="15"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding StockKeepingUnit, StringFormat='SKU: {0}'}"
+                                                   Style="{StaticResource MutedCaption}" />
+                                            <Label Text="{Binding StockDisplayText, StringFormat='Available: {0}'}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="13"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="1"
+                                                BackgroundColor="{StaticResource StatusSuccess}"
+                                                Padding="10,4"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsLowStock}" Value="True">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsOutOfStock}" Value="True">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Label Text="{Binding StockStatusText}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource PureWhite}" />
+                                        </Border>
+
+                                        <Button Grid.Column="2"
+                                                Text="+ Replenish"
+                                                Style="{StaticResource PrimaryBlackButton}"
+                                                HeightRequest="36"
+                                                Padding="12,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.ReplenishStockCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="3"
+                                                Text="- Spoilage/Waste"
+                                                Style="{StaticResource DangerButton}"
+                                                HeightRequest="36"
+                                                Padding="12,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.RecordSpoilageOrWasteCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="4"
+                                                Text="Set Exact Count"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                HeightRequest="36"
+                                                Padding="12,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.SetManualStockCountCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Immutable Inventory Movement Ledger -->
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="INVENTORY MOVEMENT LEDGER (inventory_logs)"
+                           FontFamily="QuicksandBold"
+                           FontSize="16"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <CollectionView ItemsSource="{Binding RecentInventoryLogs}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:InventoryLog">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,10">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding ProductName}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="14"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding MovementType}"
+                                                   Style="{StaticResource MutedCaption}" />
+                                        </VerticalStackLayout>
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                                            <Label Text="{Binding PerformedByName}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource PrimaryBlack}"
+                                                   HorizontalOptions="End" />
+                                            <Label Text="{Binding RecordedAt}"
+                                                   Style="{StaticResource MutedCaption}"
+                                                   HorizontalOptions="End" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="2"
+                                                BackgroundColor="{StaticResource PureWhite}"
+                                                Stroke="{StaticResource BorderGray}"
+                                                Padding="10,6"
+                                                VerticalOptions="Center">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                            <Label Text="{Binding QuantityChangedDisplay}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="13"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

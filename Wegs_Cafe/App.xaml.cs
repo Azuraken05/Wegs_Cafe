@@ -1,18 +1,19 @@
 ﻿using Wegs_Cafe.Views;
 
-namespace Wegs_Cafe
+namespace Wegs_Cafe;
+
+public partial class App : Application
 {
-    public partial class App : Application
+    private readonly IServiceProvider _serviceProvider;
+
+    public App(IServiceProvider serviceProvider)
     {
-        private readonly IServiceProvider _services;
+        InitializeComponent();
+        _serviceProvider = serviceProvider;
+    }
 
-        public App(IServiceProvider services)
-        {
-            InitializeComponent();
-            _services = services;
-        }
-
-        protected override Window CreateWindow(IActivationState? activationState)
-            => new Window(_services.GetRequiredService<LoginPage>());
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new Window(_serviceProvider.GetRequiredService<AuthenticationPage>());
     }
 }

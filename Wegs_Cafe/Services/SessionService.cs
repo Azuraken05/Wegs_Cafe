@@ -1,45 +1,54 @@
-﻿using Wegs_Cafe.Models;
+using Wegs_Cafe.Models;
 
 namespace Wegs_Cafe.Services;
 
 /// <summary>
-/// Holds the signed-in user and answers every "is this role allowed?" question.
-/// ViewModels and the Shell ask this class - never compare role strings elsewhere.
+/// Centralized session &amp; Role-Based Access Control (RBAC) state for the currently authenticated user.
+/// Enforces the 3-tier access rules for Owner, Manager, and Staff.
 /// </summary>
 public class SessionService
 {
-    public AppUser? CurrentUser { get; private set; }
+    public UserAccount? CurrentUser { get; private set; }
+    public UserAccount? ActiveUser => CurrentUser;
+
     public event EventHandler? SessionChanged;
+    public event EventHandler? ActiveUserChanged;
 
-    public bool IsLoggedIn => CurrentUser != null;
+    public bool IsAuthenticated => CurrentUser != null;
     public string Role => CurrentUser?.Role ?? string.Empty;
-    public string DisplayName => CurrentUser?.FullName ?? string.Empty;
+    public string FullName => CurrentUser?.FullName ?? string.Empty;
 
-    public bool IsOwner => Role == Roles.Owner;
-    public bool IsManager => Role == Roles.Manager;
-    public bool IsStaff => Role == Roles.Staff;
+    public bool IsOwner => Role == UserRoles.Owner;
+    public bool IsManager => Role == UserRoles.Manager;
+    public bool IsStaff => Role == UserRoles.Staff;
 
-    // ---- Permission matrix (spec section 4A) ----
-    public bool CanUsePos => IsLoggedIn;                                   // all roles
-    public bool CanViewInventory => IsLoggedIn;                            // all roles (staff read-only)
-    public bool CanEditInventory => IsOwner || IsManager;                  // restock / adjust
-    public bool CanViewDashboard => IsOwner || IsManager;
-    public bool CanManageProducts => IsOwner || IsManager;
-    public bool CanViewProfit => IsOwner;                                  // cost price / margins
-    public bool CanManageUsers => IsOwner;
-    public bool CanViewAuditLogs => IsOwner;
-    public bool CanVoidOrders => IsOwner;                                  // managers via PIN authorization
-    public bool CanConfigurePrinter => IsOwner;
+    // ---- 3-Tier Role-Based Access Control Rules (Section 4A) ----
+    public bool CanAccessDashboard => IsOwner || IsManager;
+    public bool CanExportFinancialReports => IsOwner;
+    public bool CanAccessPointOfSale => IsAuthenticated;
+    public bool CanAccessProductRegistration => IsOwner || IsManager;
+    public bool CanManageProducts => CanAccessProductRegistration;
+    public bool CanViewCostAndProfitMargins => IsOwner;
+    public bool CanAccessInventoryManagement => IsAuthenticated;
+    public bool CanManageInventory => CanAccessInventoryManagement;
+    public bool CanModifyInventoryStock => IsOwner || IsManager;
+    public bool CanAccessUserManagement => IsOwner;
+    public bool CanManageUserAccounts => CanAccessUserManagement;
+    public bool CanAccessAuditTrail => IsOwner;
+    public bool CanViewAuditTrail => CanAccessAuditTrail;
+    public bool CanAuthorizeOrderVoid => IsOwner || IsManager;
 
-    public void SignIn(AppUser user)
+    public void StartSession(UserAccount userAccount)
     {
-        CurrentUser = user;
+        CurrentUser = userAccount;
         SessionChanged?.Invoke(this, EventArgs.Empty);
+        ActiveUserChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SignOut()
+    public void EndSession()
     {
         CurrentUser = null;
         SessionChanged?.Invoke(this, EventArgs.Empty);
+        ActiveUserChanged?.Invoke(this, EventArgs.Empty);
     }
 }

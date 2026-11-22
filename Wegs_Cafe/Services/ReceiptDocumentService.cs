@@ -1,53 +1,70 @@
-﻿using Wegs_Cafe.Helpers;
+using System.Text;
+using Wegs_Cafe.Helpers;
 using Wegs_Cafe.Models;
 #if ANDROID
-using Android.Graphics.Pdf;
 using AG = Android.Graphics;
+using Android.Graphics.Pdf;
 #endif
 
 namespace Wegs_Cafe.Services;
 
-/// <summary>PDF fallback so receipts can be tested/shared without a thermal printer.</summary>
+/// <summary>
+/// Generates shareable receipt documents (PDF on Android via PdfDocument, formatted text file fallback on desktop).
+/// </summary>
 public class ReceiptDocumentService : IReceiptDocumentService
 {
-    private readonly IReceiptPrinterService _printer;
-    public ReceiptDocumentService(IReceiptPrinterService printer) => _printer = printer;
+    public async Task<string?> GenerateReceiptPdfAsync(Order order)
+    {
+        var receiptLines = ReceiptFormatter.FormatPlainTextReceipt(order, 32)
+            .Replace("\r\n", "\n")
+            .Split('\n');
 
 #if ANDROID
-    public Task<string?> CreatePdfAsync(Order order)
-    {
-        var lines = ReceiptBuilder.Build(order, _printer.CharsPerLine);
-        const float textSize = 10f, lineHeight = 14f, margin = 20f;
-        var pageWidth = (int)(_printer.CharsPerLine * textSize * 0.62f + margin * 2);
-        var pageHeight = (int)(lines.Count * lineHeight + margin * 2);
+        var fileName = $"{order.ReceiptNumber}.pdf";
+        var filePath = System.IO.Path.Combine(FileSystem.CacheDirectory, fileName);
 
-        var path = System.IO.Path.Combine(FileSystem.CacheDirectory, $"{order.ReceiptNumber}.pdf");
-        var doc = new PdfDocument();
-        try
+        await Task.Run(() =>
         {
-            var page = doc.StartPage(new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).Create());
-            using var normal = new AG.Paint { TextSize = textSize, AntiAlias = true };
-            normal.SetTypeface(AG.Typeface.Monospace);
-            using var bold = new AG.Paint { TextSize = textSize, AntiAlias = true, FakeBoldText = true };
-            bold.SetTypeface(AG.Typeface.Monospace);
-            using var large = new AG.Paint { TextSize = textSize * 1.8f, AntiAlias = true, FakeBoldText = true };
-            large.SetTypeface(AG.Typeface.Monospace);
+            using var document = new PdfDocument();
+            var lineHeight = 16;
+            var padding = 24;
+            var pageWidth = 300;
+            var pageHeight = Math.Max(420, (receiptLines.Length * lineHeight) + (padding * 2));
 
-            var y = margin + textSize;
-            foreach (var l in lines)
+            var pageInfo = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).Create();
+            var page = document.StartPage(pageInfo);
+            var canvas = page.Canvas!;
+
+            using var backgroundPaint = new AG.Paint { Color = AG.Color.White };
+            canvas.DrawRect(0, 0, pageWidth, pageHeight, backgroundPaint);
+
+            using var textPaint = new AG.Paint
             {
-                var paint = l.Large ? large : l.Bold ? bold : normal;
-                page.Canvas.DrawText(l.Text, margin, y, paint);
-                y += lineHeight;
+                Color = AG.Color.Black,
+                TextSize = 11f,
+                AntiAlias = true
+            };
+            textPaint.SetTypeface(AG.Typeface.Monospace);
+
+            var currentY = (float)padding + 12f;
+            foreach (var line in receiptLines)
+            {
+                canvas.DrawText(line, padding, currentY, textPaint);
+                currentY += lineHeight;
             }
-            doc.FinishPage(page);
-            using var fs = File.Create(path);
-            doc.WriteTo(fs);
-        }
-        finally { doc.Close(); }
-        return Task.FromResult<string?>(path);
-    }
+
+            document.FinishPage(page);
+            using var stream = File.Create(filePath);
+            document.WriteTo(stream);
+        });
+
+        return filePath;
 #else
-    public Task<string?> CreatePdfAsync(Order order) => Task.FromResult<string?>(null);
+        var fileName = $"{order.ReceiptNumber}.txt";
+        var filePath = System.IO.Path.Combine(FileSystem.CacheDirectory, fileName);
+        var formattedText = ReceiptFormatter.FormatPlainTextReceipt(order, 32);
+        await File.WriteAllTextAsync(filePath, formattedText, Encoding.UTF8);
+        return filePath;
 #endif
+    }
 }

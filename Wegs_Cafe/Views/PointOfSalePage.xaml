@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.PointOfSalePage"
+             x:DataType="vm:PointOfSaleViewModel"
+             x:Name="PointOfSaleRootPage"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <Grid x:Name="PointOfSaleContainer"
+          Padding="16"
+          ColumnDefinitions="{OnIdiom Phone='*', Tablet='1.85*,1.15*', Desktop='1.85*,1.15*'}"
+          RowDefinitions="*,Auto"
+          ColumnSpacing="16">
+
+        <!-- Left / Main Area: Search, Category Pills, Product Grid, and Recent Order History Drawer -->
+        <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+            <!-- Top POS Control Bar -->
+            <Border Grid.Row="0" Style="{StaticResource CardSurface}" Padding="14,12">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                    <!-- Search Bar -->
+                    <Border Grid.Column="0" Style="{StaticResource SearchPillBorder}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                <Image Source="search.png" WidthRequest="15" HeightRequest="15" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchQuery}"
+                                   Placeholder="Search menu item or SKU..."
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Recent Orders / Void Toggle Button -->
+                    <Button Grid.Column="1"
+                            Text="Orders / Void"
+                            ImageSource="receipt_long.png"
+                            Style="{StaticResource PrimaryBlackButton}"
+                            HeightRequest="42"
+                            Padding="12,0"
+                            FontSize="12"
+                            Command="{Binding ToggleOrderHistoryPanelCommand}" />
+
+                    <!-- Bluetooth Printer Settings Button -->
+                    <Button Grid.Column="2"
+                            Text="Printer"
+                            ImageSource="print.png"
+                            Style="{StaticResource PrimaryBlackButton}"
+                            HeightRequest="42"
+                            Padding="12,0"
+                            FontSize="12"
+                            Command="{Binding ConfigureBluetoothPrinterCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Category Filter Pills -->
+            <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Categories}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Button Text="{Binding .}"
+                                    Style="{StaticResource OutlineSecondaryButton}"
+                                    HeightRequest="38"
+                                    Padding="16,0"
+                                    CornerRadius="19"
+                                    FontSize="13"
+                                    Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.SelectCategoryCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+
+            <!-- Responsive Product Catalog Grid -->
+            <CollectionView Grid.Row="2"
+                            ItemsSource="{Binding FilteredProducts}"
+                            SelectionMode="None"
+                            IsVisible="{Binding IsOrderHistoryPanelVisible, Converter={StaticResource InverseBoolConverter}}">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical"
+                                     Span="{OnIdiom Phone=2, Tablet=3, Desktop=3}"
+                                     HorizontalItemSpacing="12"
+                                     VerticalItemSpacing="12" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Product">
+                        <Border BackgroundColor="{StaticResource PureWhite}"
+                                Stroke="{StaticResource BorderGray}"
+                                StrokeThickness="1"
+                                Padding="14">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="16" /></Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnProductCardTapped" />
+                            </Border.GestureRecognizers>
+
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Border Grid.Column="0"
+                                            BackgroundColor="{StaticResource OffWhiteCream}"
+                                            Padding="8,3"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="Start">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                        <Label Text="{Binding Category}"
+                                               FontFamily="InterSemiBold"
+                                               FontSize="10"
+                                               TextColor="{StaticResource MutedText}" />
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{StaticResource StatusSuccess}"
+                                            Padding="8,3"
+                                            StrokeThickness="0">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsLowStock}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsOutOfStock}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Label Text="{Binding StockDisplayText}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="10"
+                                               TextColor="{StaticResource PureWhite}" />
+                                    </Border>
+                                </Grid>
+
+                                <Label Text="{Binding ProductName}"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="15"
+                                       TextColor="{StaticResource PrimaryBlack}"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="2" />
+
+                                <Label Text="{Binding StockKeepingUnit}"
+                                       Style="{StaticResource MutedCaption}"
+                                       FontSize="11" />
+
+                                <Grid ColumnDefinitions="*,Auto" VerticalOptions="End" Margin="0,4,0,0">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding SellingPrice, Converter={StaticResource CurrencyConverter}}"
+                                           FontFamily="QuicksandBold"
+                                           FontSize="17"
+                                           TextColor="{StaticResource PrimaryBlack}"
+                                           VerticalOptions="Center" />
+
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{StaticResource PrimaryBlack}"
+                                            Padding="12,6"
+                                            StrokeThickness="0">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                        <Label Text="+ Add"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="12"
+                                               TextColor="{StaticResource PureWhite}" />
+                                    </Border>
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Recent Orders & Void Order Panel (Toggled via Orders / Void button) -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource CardSurface}"
+                    Padding="16"
+                    IsVisible="{Binding IsOrderHistoryPanelVisible}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="RECENT ORDERS &amp; VOID TRANSACTION"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="16"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Voiding an order requires a Manager or Owner 4-6 digit Security PIN and automatically restores stock."
+                                   Style="{StaticResource MutedCaption}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Back to Menu"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                HeightRequest="36"
+                                Padding="14,0"
+                                FontSize="12"
+                                Command="{Binding ToggleOrderHistoryPanelCommand}" />
+                    </Grid>
+
+                    <CollectionView ItemsSource="{Binding RecentCompletedAndVoidedOrders}" SelectionMode="None" HeightRequest="420">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Order">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,10">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding ReceiptNumber}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="14"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding ItemsSummary}"
+                                                   Style="{StaticResource MutedCaption}"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding PaymentMethod, StringFormat='Payment: {0}'}"
+                                                   Style="{StaticResource MutedCaption}" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="1"
+                                               Text="{Binding TotalAmount, Converter={StaticResource CurrencyConverter}}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource PrimaryBlack}"
+                                               VerticalOptions="Center" />
+
+                                        <Button Grid.Column="2"
+                                                Text="Receipt"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                HeightRequest="34"
+                                                Padding="10,0"
+                                                FontSize="11"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.ViewOrderReceiptCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="3"
+                                                Text="Void Order"
+                                                Style="{StaticResource DangerButton}"
+                                                HeightRequest="34"
+                                                Padding="10,0"
+                                                FontSize="11"
+                                                IsEnabled="{Binding IsVoided, Converter={StaticResource InverseBoolConverter}}"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.VoidOrderTransactionCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Footer Status Bar -->
+            <Border Grid.Row="3" BackgroundColor="{StaticResource PureWhite}" Stroke="{StaticResource BorderGray}" Padding="12,8">
+                <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Grid.Column="0" Text="{Binding ActiveCashierDisplay}" Style="{StaticResource MutedCaption}" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding SelectedPrinterStatus}" Style="{StaticResource MutedCaption}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Right Column (Tablet / Desktop Split-Screen Order Cart) -->
+        <Border Grid.Row="0"
+                Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
+                Style="{StaticResource CardSurface}"
+                Padding="18"
+                IsVisible="{OnIdiom Phone=False, Tablet=True, Desktop=True}">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+                <!-- Cart Header -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                        <Label Text="LIVE ORDER CART"
+                               FontFamily="QuicksandBold"
+                               FontSize="18"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="{Binding Cart.TotalQuantity, StringFormat='{0} items in current order'}"
+                               Style="{StaticResource MutedCaption}" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="1"
+                            Text="Clear"
+                            Style="{StaticResource OutlineSecondaryButton}"
+                            HeightRequest="34"
+                            Padding="12,0"
+                            FontSize="12"
+                            Command="{Binding ClearCurrentCartCommand}" />
+                </Grid>
+
+                <!-- Dine-In / Take-Out Toggle + Customer/Table Tag -->
+                <VerticalStackLayout Grid.Row="1" Spacing="10">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Text="Dine-In"
+                                HeightRequest="38"
+                                CornerRadius="12"
+                                Command="{Binding SelectOrderTypeCommand}"
+                                CommandParameter="Dine-In">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDineInSelected}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDineInSelected}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Grid.Column="1"
+                                Text="Take-Out"
+                                HeightRequest="38"
+                                CornerRadius="12"
+                                Command="{Binding SelectOrderTypeCommand}"
+                                CommandParameter="Take-Out">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsTakeOutSelected}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsTakeOutSelected}" Value="False">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource OffWhiteCream}" />
+                                    <Setter Property="TextColor" Value="{StaticResource PrimaryBlack}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+
+                    <Border Style="{StaticResource InputFieldBorder}" Padding="12,2">
+                        <Entry Text="{Binding CustomerOrTableLabel}"
+                               Placeholder="Customer Name or Table Number (e.g. Table 4)"
+                               BackgroundColor="Transparent"
+                               FontSize="13" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Cart Line Items -->
+                <CollectionView Grid.Row="2" ItemsSource="{Binding Cart.OrderItems}" SelectionMode="None">
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8" Padding="20">
+                            <Border BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="44" HeightRequest="44" StrokeThickness="0" HorizontalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
+                                <Image Source="point_of_sale.png" WidthRequest="24" HeightRequest="24" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="Cart is empty" FontFamily="QuicksandBold" FontSize="15" HorizontalOptions="Center" />
+                            <Label Text="Tap any menu card on the left to add items." Style="{StaticResource MutedCaption}" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:OrderCartItem">
+                            <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                    Stroke="{StaticResource BorderGray}"
+                                    Padding="12,10">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Grid.Column="0"
+                                               Text="{Binding Product.ProductName}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource PrimaryBlack}" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding LineSubtotal, Converter={StaticResource CurrencyConverter}}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource PrimaryBlack}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                        <Button Grid.Column="0"
+                                                Text="-"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                WidthRequest="34"
+                                                HeightRequest="32"
+                                                Padding="0"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.DecrementCartItemCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Quantity}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="14"
+                                               WidthRequest="28"
+                                               HorizontalTextAlignment="Center"
+                                               VerticalOptions="Center" />
+
+                                        <Button Grid.Column="2"
+                                                Text="+"
+                                                Style="{StaticResource PrimaryBlackButton}"
+                                                WidthRequest="34"
+                                                HeightRequest="32"
+                                                Padding="0"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.IncrementCartItemCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="3"
+                                                Text="Note"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                HeightRequest="32"
+                                                Padding="10,0"
+                                                FontSize="11"
+                                                HorizontalOptions="End"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.EditItemNotesCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="4"
+                                                Text="Remove"
+                                                Style="{StaticResource DangerButton}"
+                                                HeightRequest="32"
+                                                Padding="10,0"
+                                                FontSize="11"
+                                                Command="{Binding Source={x:Reference PointOfSaleRootPage}, Path=BindingContext.RemoveCartItemCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+
+                                    <Label Text="{Binding PreparationNotes, StringFormat='Note: {0}'}"
+                                           Style="{StaticResource MutedCaption}"
+                                           IsVisible="{Binding PreparationNotes, Converter={StaticResource StringNotEmptyConverter}}" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Cart Totals & Checkout CTA -->
+                <VerticalStackLayout Grid.Row="3" Spacing="10">
+                    <BoxView HeightRequest="1" Color="{StaticResource BorderGray}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Subtotal Amount" FontFamily="InterSemiBold" FontSize="14" TextColor="{StaticResource MutedText}" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Cart.SubtotalAmount, Converter={StaticResource CurrencyConverter}}"
+                               FontFamily="QuicksandBold"
+                               FontSize="20"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                    </Grid>
+
+                    <Button Text="Proceed to Multi-Payment Checkout"
+                            Style="{StaticResource PrimaryBlackButton}"
+                            HeightRequest="52"
+                            Command="{Binding ProceedToCheckoutCommand}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- Phone Bottom Summary Bar -->
+        <Border Grid.Row="1"
+                Grid.Column="0"
+                Style="{StaticResource DarkCardSurface}"
+                Padding="16,12"
+                Margin="0,10,0,0"
+                IsVisible="{OnIdiom Phone=True, Tablet=False, Desktop=False}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="{Binding Cart.TotalQuantity, StringFormat='{0} Items in Cart'}"
+                           FontFamily="InterSemiBold"
+                           FontSize="12"
+                           TextColor="#D4D4D8" />
+                    <Label Text="{Binding Cart.SubtotalAmount, Converter={StaticResource CurrencyConverter}}"
+                           FontFamily="QuicksandBold"
+                           FontSize="20"
+                           TextColor="{StaticResource PureWhite}" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        Text="Checkout"
+                        BackgroundColor="{StaticResource PureWhite}"
+                        TextColor="{StaticResource PrimaryBlack}"
+                        FontFamily="QuicksandBold"
+                        CornerRadius="14"
+                        HeightRequest="44"
+                        Padding="20,0"
+                        Command="{Binding ProceedToCheckoutCommand}" />
+            </Grid>
+        </Border>
+
+    </Grid>
+</ContentPage>

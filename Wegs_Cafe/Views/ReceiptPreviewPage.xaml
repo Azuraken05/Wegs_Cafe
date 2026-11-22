@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.ReceiptPreviewPage"
+             x:DataType="vm:ReceiptPreviewViewModel"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <Grid Padding="24" HorizontalOptions="Center" VerticalOptions="Start">
+            <Border x:Name="ReceiptCard"
+                    Style="{StaticResource CardSurface}"
+                    MaximumWidthRequest="520"
+                    MinimumWidthRequest="330"
+                    Padding="26">
+                <VerticalStackLayout Spacing="16">
+
+                    <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                        <Border BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="34" HeightRequest="34" StrokeThickness="0" VerticalOptions="Center">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="17" /></Border.StrokeShape>
+                            <Image Source="receipt_long.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Label Text="OFFICIAL TRANSACTION RECEIPT"
+                               FontFamily="QuicksandBold"
+                               FontSize="19"
+                               TextColor="{StaticResource PrimaryBlack}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{Binding PrinterDeviceSummary}"
+                           Style="{StaticResource MutedCaption}"
+                           HorizontalOptions="Center" />
+
+                    <!-- Charcoal Surface Receipt Preview Container -->
+                    <Border Style="{StaticResource DarkCardSurface}" Padding="20">
+                        <Label Text="{Binding FormattedReceiptText}"
+                               FontFamily="Courier New"
+                               FontSize="12.5"
+                               TextColor="{StaticResource PureWhite}" />
+                    </Border>
+
+                    <!-- Print & Export Actions -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Button Grid.Column="0"
+                                Text="Print Thermal Receipt"
+                                ImageSource="print.png"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                Command="{Binding PrintThermalReceiptCommand}" />
+
+                        <Button Grid.Column="1"
+                                Text="Share / Export Receipt"
+                                ImageSource="file_download.png"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                Command="{Binding ExportAndShareReceiptDocumentCommand}" />
+                    </Grid>
+
+                    <Button Text="Start New Order in Point of Sale"
+                            Style="{StaticResource SuccessButton}"
+                            Command="{Binding StartNewOrderCommand}" />
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+</ContentPage>

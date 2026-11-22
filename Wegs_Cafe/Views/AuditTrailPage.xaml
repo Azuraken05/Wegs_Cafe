@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.AuditTrailPage"
+             x:DataType="vm:AuditTrailViewModel"
+             x:Name="AuditTrailRoot"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <VerticalStackLayout x:Name="AuditTrailContainer" Padding="20" Spacing="16">
+
+            <Border Style="{StaticResource CardSurface}" Padding="20">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="IMMUTABLE SYSTEM AUDIT TRAIL (audit_logs)"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="18"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="Append-only security ledger recording logins, menu changes, stock adjustments, orders, voids, and report exports."
+                                   Style="{StaticResource MutedCaption}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Text="Refresh Ledger"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                HeightRequest="38"
+                                Command="{Binding LoadAuditLogsCommand}" />
+                    </Grid>
+
+                    <!-- Search Bar -->
+                    <Border Style="{StaticResource SearchPillBorder}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                <Image Source="search.png" WidthRequest="15" HeightRequest="15" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchQuery}"
+                                   Placeholder="Search actor name, action type, resource path, or description..."
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Action Type Filter Pills -->
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding ActionFilterOptions}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Button Text="{Binding .}"
+                                            Style="{StaticResource OutlineSecondaryButton}"
+                                            HeightRequest="34"
+                                            Padding="12,0"
+                                            CornerRadius="17"
+                                            FontSize="11"
+                                            Command="{Binding Source={x:Reference AuditTrailRoot}, Path=BindingContext.SelectActionFilterCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <!-- Audit Log Entries -->
+                    <CollectionView ItemsSource="{Binding FilteredAuditLogs}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:AuditLog">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,12">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="6">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <Border Grid.Column="0"
+                                                    BackgroundColor="{StaticResource PrimaryBlack}"
+                                                    Padding="10,4"
+                                                    StrokeThickness="0">
+                                                <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                <Label Text="{Binding ActionType}"
+                                                       FontFamily="QuicksandBold"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource PureWhite}" />
+                                            </Border>
+
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding TargetResource}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource MutedText}"
+                                                   VerticalOptions="Center" />
+
+                                            <Label Grid.Column="2"
+                                                   Text="{Binding RecordedAt}"
+                                                   Style="{StaticResource MutedCaption}"
+                                                   VerticalOptions="Center" />
+                                        </Grid>
+
+                                        <Label Text="{Binding ActionDescription}"
+                                               FontFamily="InterSemiBold"
+                                               FontSize="13"
+                                               TextColor="{StaticResource PrimaryBlack}" />
+
+                                        <Label Text="{Binding ActorName, StringFormat='Actor: {0}'}"
+                                               Style="{StaticResource MutedCaption}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

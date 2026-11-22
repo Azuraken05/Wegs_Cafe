@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.ProductRegistrationPage"
+             x:DataType="vm:ProductRegistrationViewModel"
+             x:Name="ProductCatalogPageRoot"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <Grid x:Name="ProductPageContainer"
+              Padding="20"
+              ColumnDefinitions="{OnIdiom Phone='*', Tablet='420,*', Desktop='440,*'}"
+              RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
+              ColumnSpacing="18"
+              RowSpacing="18">
+
+            <!-- Left Column: Product Registration / Update Form -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="20" VerticalOptions="Start">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="{Binding FormSectionTitle}"
+                           FontFamily="QuicksandBold"
+                           FontSize="18"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <Border BackgroundColor="#FEF2F2"
+                            Stroke="{StaticResource StatusDanger}"
+                            Padding="12,8"
+                            IsVisible="{Binding HasErrorMessage}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource StatusDanger}" FontFamily="InterSemiBold" FontSize="12" />
+                    </Border>
+
+                    <!-- Product Image Preview & Upload Controls -->
+                    <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                            Stroke="{StaticResource BorderGray}"
+                            Padding="14">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Grid HeightRequest="130">
+                                <Image Source="{Binding ImageUrl, Converter={StaticResource ImagePathConverter}}"
+                                       Aspect="AspectFill"
+                                       HeightRequest="130"
+                                       IsVisible="{Binding HasSelectedImage}" />
+                                <VerticalStackLayout VerticalOptions="Center"
+                                                     HorizontalOptions="Center"
+                                                     Spacing="6"
+                                                     IsVisible="{Binding HasSelectedImage, Converter={StaticResource InverseBoolConverter}}">
+                                    <Border BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="40" HeightRequest="40" StrokeThickness="0" HorizontalOptions="Center">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
+                                        <Image Source="add_box.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                    <Label Text="Product Photo Preview"
+                                           Style="{StaticResource MutedCaption}"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <Button Grid.Column="0"
+                                        Text="Gallery Photo"
+                                        Style="{StaticResource OutlineSecondaryButton}"
+                                        HeightRequest="38"
+                                        FontSize="12"
+                                        Command="{Binding PickImageFromGalleryCommand}" />
+                                <Button Grid.Column="1"
+                                        Text="Camera Photo"
+                                        Style="{StaticResource OutlineSecondaryButton}"
+                                        HeightRequest="38"
+                                        FontSize="12"
+                                        Command="{Binding CaptureImageWithCameraCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Stock Keeping Unit (SKU)" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding StockKeepingUnit}" Placeholder="WEGS-001" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Category" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Picker ItemsSource="{Binding AvailableCategories}"
+                                        SelectedItem="{Binding SelectedCategory}"
+                                        TextColor="{StaticResource PrimaryBlack}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Product Name" FontFamily="InterSemiBold" FontSize="12" />
+                        <Border Style="{StaticResource InputFieldBorder}">
+                            <Entry Text="{Binding ProductName}" Placeholder="e.g. Spanish Latte (16oz)" BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Selling Price (PHP)" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding SellingPriceText}" Keyboard="Numeric" Placeholder="155.00" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Cost Price (PHP)" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding CostPriceText}" Keyboard="Numeric" Placeholder="52.00" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Stock Quantity" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding StockQuantityText}" Keyboard="Numeric" Placeholder="25" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Low Threshold" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding LowStockThresholdText}" Keyboard="Numeric" Placeholder="10" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="Unit" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding MeasurementUnit}" Placeholder="cups" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <Label Grid.Column="0" Text="Available for POS Ordering" FontFamily="InterSemiBold" FontSize="13" VerticalOptions="Center" />
+                        <Switch Grid.Column="1" IsToggled="{Binding IsAvailable}" OnColor="{StaticResource PrimaryBlack}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="{Binding SaveButtonLabel}"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                Command="{Binding SaveProductCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Reset"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                Command="{Binding ResetProductFormCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Right Column: Searchable Menu Catalog -->
+            <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                    Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
+                    Style="{StaticResource CardSurface}"
+                    Padding="20">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="REGISTERED MENU CATALOG"
+                           FontFamily="QuicksandBold"
+                           FontSize="18"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <!-- Search Bar -->
+                    <Border Style="{StaticResource SearchPillBorder}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryBlack}" WidthRequest="28" HeightRequest="28" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                <Image Source="search.png" WidthRequest="15" HeightRequest="15" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchQuery}"
+                                   Placeholder="Search product name, SKU, or category..."
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Category Filter Pills -->
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding FilterCategories}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Button Text="{Binding .}"
+                                            Style="{StaticResource OutlineSecondaryButton}"
+                                            HeightRequest="36"
+                                            Padding="14,0"
+                                            CornerRadius="18"
+                                            FontSize="12"
+                                            Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.SelectFilterCategoryCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <!-- Product List -->
+                    <CollectionView ItemsSource="{Binding FilteredProducts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Product">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,12">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="3">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding ProductName}"
+                                                       FontFamily="QuicksandBold"
+                                                       FontSize="15"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
+                                                <Border BackgroundColor="{StaticResource PureWhite}"
+                                                        Stroke="{StaticResource BorderGray}"
+                                                        Padding="8,2">
+                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                    <Label Text="{Binding Category}" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource MutedText}" />
+                                                </Border>
+                                            </HorizontalStackLayout>
+
+                                            <Label Text="{Binding StockKeepingUnit, StringFormat='SKU: {0}'}"
+                                                   Style="{StaticResource MutedCaption}" />
+
+                                            <HorizontalStackLayout Spacing="14">
+                                                <Label Text="{Binding SellingPrice, Converter={StaticResource CurrencyConverter}, StringFormat='Selling: {0}'}"
+                                                       FontFamily="InterSemiBold"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
+                                                <Label Text="{Binding CostPrice, Converter={StaticResource CurrencyConverter}, StringFormat='Cost: {0}'}"
+                                                       Style="{StaticResource MutedCaption}" />
+                                                <Label Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}"
+                                                       FontFamily="InterSemiBold"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+
+                                        <Button Grid.Column="1"
+                                                Text="Edit"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                HeightRequest="36"
+                                                Padding="14,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.EditProductCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <Button Grid.Column="2"
+                                                Text="Delete"
+                                                Style="{StaticResource DangerButton}"
+                                                HeightRequest="36"
+                                                Padding="14,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference ProductCatalogPageRoot}, Path=BindingContext.DeleteProductCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </Grid>
+    </ScrollView>
+</ContentPage>

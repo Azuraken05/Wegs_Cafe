@@ -1,73 +1,128 @@
 ﻿using Wegs_Cafe.Services;
+using Wegs_Cafe.Views;
 
 namespace Wegs_Cafe;
 
 public partial class AppShell : Shell
 {
-    private readonly IAuthService _auth;
-    private readonly AppNavigator _navigator;
+    private readonly SessionService _sessionService;
+    private readonly IAuthenticationService _authenticationService;
+    private readonly ApplicationNavigationService _navigationService;
 
-    public AppShell(SessionService session, IAuthService auth, AppNavigator navigator)
+    public AppShell(
+        SessionService sessionService,
+        IAuthenticationService authenticationService,
+        ApplicationNavigationService navigationService)
     {
         InitializeComponent();
-        Routing.RegisterRoute("productedit", typeof(Views.ProductEditPage));
-        Routing.RegisterRoute("payment", typeof(Views.PaymentPage));
-        Routing.RegisterRoute("receipt", typeof(Views.ReceiptPage));
-        _auth = auth;
-        _navigator = navigator;
 
-        // Role-based navigation: hide what this user may not open.
-        DashboardTab.IsVisible = session.CanViewDashboard;
-        PosTab.IsVisible = session.CanUsePos;
-        OrdersTab.IsVisible = session.CanUsePos;
-        ShiftTab.IsVisible = session.CanUsePos;
-        ProductsTab.IsVisible = session.CanManageProducts;
-        InventoryTab.IsVisible = session.CanViewInventory;
-        StaffTab.IsVisible = session.CanManageUsers;
-        AuditTab.IsVisible = session.CanViewAuditLogs;
-        PrinterTab.IsVisible = session.CanConfigurePrinter;
+        _sessionService = sessionService;
+        _authenticationService = authenticationService;
+        _navigationService = navigationService;
 
-        // Select the first landing page: Dashboard for Owner/Manager, POS for Staff.
-        CurrentItem = session.CanViewDashboard ? DashboardTab : PosTab;
+        Routing.RegisterRoute(nameof(PaymentCheckoutPage), typeof(PaymentCheckoutPage));
+        Routing.RegisterRoute(nameof(ReceiptPreviewPage), typeof(ReceiptPreviewPage));
 
-        // Hamburger Menu Sidebar navigation on all devices.
-        FlyoutBehavior = FlyoutBehavior.Flyout;
+        ApplyRoleBasedNavigationGuards();
+        BuildSidebarHeader();
+    }
+
+    private void ApplyRoleBasedNavigationGuards()
+    {
+        SalesAnalyticsDashboardFlyoutItem.IsVisible = _sessionService.CanAccessDashboard;
+        PointOfSaleFlyoutItem.IsVisible = _sessionService.CanAccessPointOfSale;
+        ProductRegistrationFlyoutItem.IsVisible = _sessionService.CanManageProducts;
+        InventoryManagementFlyoutItem.IsVisible = _sessionService.CanManageInventory;
+        UserManagementFlyoutItem.IsVisible = _sessionService.CanManageUserAccounts;
+        AuditTrailFlyoutItem.IsVisible = _sessionService.CanViewAuditTrail;
+
+        // Default landing route: SalesAnalyticsDashboardPage for Owner/Manager, PointOfSalePage for Staff
+        CurrentItem = _sessionService.CanAccessDashboard
+            ? SalesAnalyticsDashboardFlyoutItem
+            : PointOfSaleFlyoutItem;
+    }
+
+    private void BuildSidebarHeader()
+    {
+        var activeUser = _sessionService.ActiveUser;
+        var fullName = activeUser?.FullName ?? "Weg's Cafe Operator";
+        var roleBadge = (activeUser?.Role ?? "staff").ToUpperInvariant();
 
         FlyoutHeader = new VerticalStackLayout
         {
-            Padding = new Thickness(20, 32, 20, 18),
-            Spacing = 4,
+            Padding = new Thickness(20, 28, 20, 18),
+            Spacing = 6,
             BackgroundColor = Color.FromArgb("#0A0A0A"),
             Children =
             {
-                new Label { Text = "WEG'S CAFE", TextColor = Colors.White, FontSize = 22, FontFamily = "Heading" },
-                new Label { Text = session.DisplayName, TextColor = Color.FromArgb("#F7F6F2"), FontSize = 15, FontFamily = "Heading" },
+                new HorizontalStackLayout
+                {
+                    Spacing = 12,
+                    Children =
+                    {
+                        new Image
+                        {
+                            Source = "wegs_logo.png",
+                            WidthRequest = 44,
+                            HeightRequest = 44,
+                            Aspect = Aspect.AspectFit,
+                            VerticalOptions = LayoutOptions.Center
+                        },
+                        new VerticalStackLayout
+                        {
+                            Spacing = 2,
+                            VerticalOptions = LayoutOptions.Center,
+                            Children =
+                            {
+                                new Label
+                                {
+                                    Text = "WEG'S CAFE",
+                                    TextColor = Colors.White,
+                                    FontSize = 20,
+                                    FontFamily = "QuicksandBold"
+                                },
+                                new Label
+                                {
+                                    Text = fullName,
+                                    TextColor = Color.FromArgb("#F7F6F2"),
+                                    FontSize = 13,
+                                    FontFamily = "InterSemiBold"
+                                }
+                            }
+                        }
+                    }
+                },
                 new Border
                 {
                     BackgroundColor = Color.FromArgb("#1C1C1E"),
                     Stroke = Color.FromArgb("#6E6E73"),
                     StrokeThickness = 1,
                     StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
-                    Padding = new Thickness(10, 3),
+                    Padding = new Thickness(10, 4),
                     HorizontalOptions = LayoutOptions.Start,
-                    Margin = new Thickness(0, 4, 0, 0),
+                    Margin = new Thickness(0, 6, 0, 0),
                     Content = new Label
                     {
-                        Text = (session.CurrentUser?.RoleDisplay ?? "").ToUpperInvariant(),
-                        TextColor = Color.FromArgb("#E2E2E0"),
+                        Text = $"ROLE: {roleBadge}",
+                        TextColor = Colors.White,
                         FontSize = 11,
-                        FontFamily = "Heading"
+                        FontFamily = "QuicksandBold"
                     }
                 },
-                new BoxView { HeightRequest = 1, Color = Color.FromArgb("#1C1C1E"), Margin = new Thickness(0, 12, 0, 0) }
+                new BoxView
+                {
+                    HeightRequest = 1,
+                    Color = Color.FromArgb("#2C2C2E"),
+                    Margin = new Thickness(0, 10, 0, 0)
+                }
             }
         };
     }
 
-    private void OnLogoutClicked(object? sender, EventArgs e)
+    private async void OnSignOutClicked(object? sender, EventArgs e)
     {
         FlyoutIsPresented = false;
-        _auth.Logout();
-        _navigator.ShowLogin();
+        await _authenticationService.SignOutAsync();
+        _navigationService.NavigateToAuthentication();
     }
 }

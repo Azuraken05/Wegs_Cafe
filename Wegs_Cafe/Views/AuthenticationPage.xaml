@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             x:Class="Wegs_Cafe.Views.AuthenticationPage"
+             x:DataType="vm:AuthenticationViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <Grid Padding="24" VerticalOptions="Center" HorizontalOptions="Center">
+            <Border x:Name="AuthenticationCard"
+                    Style="{StaticResource CardSurface}"
+                    MaximumWidthRequest="460"
+                    MinimumWidthRequest="320"
+                    Padding="32">
+                <VerticalStackLayout Spacing="20">
+
+                    <!-- Monochrome Brand Header -->
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <Border BackgroundColor="{StaticResource PrimaryBlack}"
+                                WidthRequest="84"
+                                HeightRequest="84"
+                                StrokeThickness="0"
+                                HorizontalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="42" />
+                            </Border.StrokeShape>
+                            <Image Source="wegs_logo.png"
+                                   WidthRequest="68"
+                                   HeightRequest="68"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <Label Text="WEG'S CAFE"
+                               FontFamily="QuicksandBold"
+                               FontSize="26"
+                               TextColor="{StaticResource PrimaryBlack}"
+                               HorizontalOptions="Center" />
+
+                        <Label Text="Point of Sale &amp; Inventory Management System"
+                               Style="{StaticResource MutedCaption}"
+                               FontSize="13"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <BoxView HeightRequest="1" Color="{StaticResource BorderGray}" />
+
+                    <!-- Error Banner -->
+                    <Border BackgroundColor="#FEF2F2"
+                            Stroke="{StaticResource StatusDanger}"
+                            StrokeThickness="1"
+                            Padding="14,10"
+                            IsVisible="{Binding HasErrorMessage}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <HorizontalStackLayout Spacing="10">
+                            <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="26" HeightRequest="26" StrokeThickness="0" VerticalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="13" /></Border.StrokeShape>
+                                <Image Source="warning.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="{Binding ErrorMessage}"
+                                   TextColor="{StaticResource StatusDanger}"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="13"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- Username & Password Mode -->
+                    <VerticalStackLayout Spacing="14" IsVisible="{Binding IsPasswordMode}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Username or Email Address"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="13"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding Username}"
+                                       Placeholder="Enter username (e.g. Owner)"
+                                       FontFamily="InterRegular"
+                                       TextColor="{StaticResource PrimaryBlack}"
+                                       PlaceholderColor="{StaticResource MutedText}"
+                                       BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Account Password"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="13"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding Password}"
+                                       IsPassword="True"
+                                       Placeholder="Enter account password"
+                                       FontFamily="InterRegular"
+                                       TextColor="{StaticResource PrimaryBlack}"
+                                       PlaceholderColor="{StaticResource MutedText}"
+                                       BackgroundColor="Transparent"
+                                       ReturnCommand="{Binding SignInCommand}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Button Text="Sign In to Terminal"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                Command="{Binding SignInCommand}"
+                                IsEnabled="{Binding IsNotBusy}" />
+
+                        <Button Text="Auto-Fill Owner Credentials (Owner / Forones41)"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                FontSize="12"
+                                HeightRequest="42"
+                                Command="{Binding FillDemoOwnerCredentialsCommand}" />
+                    </VerticalStackLayout>
+
+                    <!-- PIN Quick-Switch Mode -->
+                    <VerticalStackLayout Spacing="14" IsVisible="{Binding IsPinQuickSwitchMode}">
+                        <Label Text="Cashier Security PIN (4 to 6 Digits)"
+                               FontFamily="InterSemiBold"
+                               FontSize="13"
+                               HorizontalOptions="Center"
+                               TextColor="{StaticResource PrimaryBlack}" />
+
+                        <Border Style="{StaticResource InputFieldBorder}" Padding="14,10">
+                            <Entry Text="{Binding SecurityPin}"
+                                   IsPassword="True"
+                                   Keyboard="Numeric"
+                                   MaxLength="6"
+                                   HorizontalTextAlignment="Center"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="22"
+                                   Placeholder="••••"
+                                   TextColor="{StaticResource PrimaryBlack}"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+
+                        <!-- Numeric PIN Pad -->
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                            <Button Grid.Row="0" Grid.Column="0" Text="1" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="1" />
+                            <Button Grid.Row="0" Grid.Column="1" Text="2" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="2" />
+                            <Button Grid.Row="0" Grid.Column="2" Text="3" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="3" />
+
+                            <Button Grid.Row="1" Grid.Column="0" Text="4" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="4" />
+                            <Button Grid.Row="1" Grid.Column="1" Text="5" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="5" />
+                            <Button Grid.Row="1" Grid.Column="2" Text="6" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="6" />
+
+                            <Button Grid.Row="2" Grid.Column="0" Text="7" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="7" />
+                            <Button Grid.Row="2" Grid.Column="1" Text="8" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="8" />
+                            <Button Grid.Row="2" Grid.Column="2" Text="9" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="9" />
+
+                            <Button Grid.Row="3" Grid.Column="0" Text="Clear" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding ClearPinDigitsCommand}" />
+                            <Button Grid.Row="3" Grid.Column="1" Text="0" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding AppendPinDigitCommand}" CommandParameter="0" />
+                            <Button Grid.Row="3" Grid.Column="2" Text="Back" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding BackspacePinDigitCommand}" />
+                        </Grid>
+
+                        <Button Text="Authorize Security PIN"
+                                Style="{StaticResource PrimaryBlackButton}"
+                                Command="{Binding SignInCommand}"
+                                IsEnabled="{Binding IsNotBusy}" />
+                    </VerticalStackLayout>
+
+                    <Button Text="{Binding ModeToggleButtonText}"
+                            BackgroundColor="Transparent"
+                            TextColor="{StaticResource MutedText}"
+                            FontFamily="InterSemiBold"
+                            FontSize="13"
+                            Command="{Binding ToggleSignInModeCommand}" />
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+</ContentPage>

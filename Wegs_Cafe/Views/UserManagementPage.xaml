@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.UserManagementPage"
+             x:DataType="vm:UserManagementViewModel"
+             x:Name="UserManagementRoot"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource OffWhiteCream}">
+
+    <ScrollView>
+        <Grid x:Name="UserManagementContainer"
+              Padding="20"
+              ColumnDefinitions="{OnIdiom Phone='*', Tablet='420,*', Desktop='440,*'}"
+              RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
+              ColumnSpacing="18"
+              RowSpacing="18">
+
+            <!-- Left Column: Owner Staff Registration Form -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardSurface}" Padding="20" VerticalOptions="Start">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="REGISTER STAFF OR MANAGER ACCOUNT"
+                           FontFamily="QuicksandBold"
+                           FontSize="17"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <Label Text="Only the Owner can provision new staff or manager accounts. Uses a secondary Firebase Auth instance so the Owner session stays active."
+                           Style="{StaticResource MutedCaption}" />
+
+                    <Border BackgroundColor="#FEF2F2"
+                            Stroke="{StaticResource StatusDanger}"
+                            Padding="12,8"
+                            IsVisible="{Binding HasErrorMessage}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource StatusDanger}" FontFamily="InterSemiBold" FontSize="12" />
+                    </Border>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Full Name" FontFamily="InterSemiBold" FontSize="12" />
+                        <Border Style="{StaticResource InputFieldBorder}">
+                            <Entry Text="{Binding FullName}" Placeholder="e.g. Maria Santos" BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Username" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding Username}" Placeholder="maria_cashier" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Assigned Role" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Picker ItemsSource="{Binding AssignableRoles}"
+                                        SelectedItem="{Binding SelectedRole}"
+                                        TextColor="{StaticResource PrimaryBlack}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Email Address" FontFamily="InterSemiBold" FontSize="12" />
+                        <Border Style="{StaticResource InputFieldBorder}">
+                            <Entry Text="{Binding EmailAddress}" Keyboard="Email" Placeholder="maria@wegscafe.local" BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Account Password" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding Password}" IsPassword="True" Placeholder="Min 6 characters" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Security PIN (4-6 digits)" FontFamily="InterSemiBold" FontSize="12" />
+                            <Border Style="{StaticResource InputFieldBorder}">
+                                <Entry Text="{Binding SecurityPin}" IsPassword="True" Keyboard="Numeric" MaxLength="6" Placeholder="e.g. 5678" BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Button Text="Register Staff Account"
+                            Style="{StaticResource PrimaryBlackButton}"
+                            Command="{Binding RegisterStaffAccountCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Right Column: Registered Accounts Directory -->
+            <Border Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
+                    Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
+                    Style="{StaticResource CardSurface}"
+                    Padding="20">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="REGISTERED USER ACCOUNTS (users)"
+                           FontFamily="QuicksandBold"
+                           FontSize="17"
+                           TextColor="{StaticResource PrimaryBlack}" />
+
+                    <CollectionView ItemsSource="{Binding UserAccounts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:UserAccount">
+                                <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="14,12">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="3">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding FullName}"
+                                                       FontFamily="QuicksandBold"
+                                                       FontSize="15"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
+                                                <Border BackgroundColor="{StaticResource PrimaryBlack}"
+                                                        Padding="8,2"
+                                                        StrokeThickness="0">
+                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                    <Label Text="{Binding RoleBadgeText}"
+                                                           FontFamily="QuicksandBold"
+                                                           FontSize="10"
+                                                           TextColor="{StaticResource PureWhite}" />
+                                                </Border>
+                                            </HorizontalStackLayout>
+
+                                            <Label Text="{Binding Username, StringFormat='Username: @{0}'}"
+                                                   FontFamily="InterSemiBold"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource PrimaryBlack}" />
+                                            <Label Text="{Binding EmailAddress}"
+                                                   Style="{StaticResource MutedCaption}" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="1"
+                                                BackgroundColor="{StaticResource StatusSuccess}"
+                                                Padding="10,4"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center">
+                                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="False">
+                                                    <Setter Property="BackgroundColor" Value="{StaticResource StatusDanger}" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Label Text="{Binding StatusBadgeText}"
+                                                   FontFamily="QuicksandBold"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource PureWhite}" />
+                                        </Border>
+
+                                        <Button Grid.Column="2"
+                                                Text="Toggle Active"
+                                                Style="{StaticResource OutlineSecondaryButton}"
+                                                HeightRequest="36"
+                                                Padding="12,0"
+                                                FontSize="12"
+                                                Command="{Binding Source={x:Reference UserManagementRoot}, Path=BindingContext.ToggleAccountActiveStatusCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </Grid>
+    </ScrollView>
+</ContentPage>
