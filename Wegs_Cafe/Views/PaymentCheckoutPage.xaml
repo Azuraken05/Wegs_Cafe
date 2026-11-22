@@ -5,7 +5,7 @@
              x:Class="Wegs_Cafe.Views.PaymentCheckoutPage"
              x:DataType="vm:PaymentCheckoutViewModel"
              Title="{Binding PageTitle}"
-             BackgroundColor="{StaticResource OffWhiteCream}">
+             BackgroundColor="{StaticResource PureWhite}">
 
     <ScrollView>
         <Grid Padding="24" HorizontalOptions="Center" VerticalOptions="Start">
@@ -34,7 +34,7 @@
                         <HorizontalStackLayout Spacing="10">
                             <Border BackgroundColor="{StaticResource StatusDanger}" WidthRequest="26" HeightRequest="26" StrokeThickness="0" VerticalOptions="Center">
                                 <Border.StrokeShape><RoundRectangle CornerRadius="13" /></Border.StrokeShape>
-                                <Image Source="warning.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Image Source="error_outline.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
                             <Label Text="{Binding ErrorMessage}"
                                    TextColor="{StaticResource StatusDanger}"
@@ -42,6 +42,21 @@
                                    FontSize="13" />
                         </HorizontalStackLayout>
                     </Border>
+
+                    <!-- Customer Name / Table Number -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Customer Name or Table Number (min 2 chars)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Border Style="{StaticResource InputFieldBorder}">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding HasCustomerOrTableError}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Entry Text="{Binding CustomerOrTableLabel}" Placeholder="e.g. Table 4 or Alex" BackgroundColor="Transparent" />
+                        </Border>
+                        <Label Text="{Binding CustomerOrTableError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasCustomerOrTableError}" />
+                    </VerticalStackLayout>
 
                     <!-- Order Totals Summary Box -->
                     <Border Style="{StaticResource DarkCardSurface}" Padding="20">
@@ -151,8 +166,15 @@
                             <VerticalStackLayout Grid.Column="0" Spacing="4">
                                 <Label Text="Cash Amount Tendered (PHP)" FontFamily="InterSemiBold" FontSize="12" />
                                 <Border Style="{StaticResource InputFieldBorder}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding HasAmountTenderedError}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                            <Setter Property="StrokeThickness" Value="1.5" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
                                     <Entry Text="{Binding AmountTenderedText}" Keyboard="Numeric" FontFamily="QuicksandBold" FontSize="18" BackgroundColor="Transparent" />
                                 </Border>
+                                <Label Text="{Binding AmountTenderedError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasAmountTenderedError}" />
                             </VerticalStackLayout>
 
                             <VerticalStackLayout Grid.Column="1" Spacing="4">
@@ -194,10 +216,17 @@
                         <VerticalStackLayout Spacing="4">
                             <Label Text="{Binding ReferenceFieldTitle}" FontFamily="InterSemiBold" FontSize="13" />
                             <Border Style="{StaticResource InputFieldBorder}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasReferenceNumberError}" Value="True">
+                                        <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                        <Setter Property="StrokeThickness" Value="1.5" />
+                                    </DataTrigger>
+                                </Border.Triggers>
                                 <Entry Text="{Binding PaymentReferenceNumber}"
-                                       Placeholder="Enter transaction or approval reference number"
+                                       Placeholder="Enter alphanumeric reference number"
                                        BackgroundColor="Transparent" />
                             </Border>
+                            <Label Text="{Binding ReferenceNumberError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasReferenceNumberError}" />
                         </VerticalStackLayout>
                     </VerticalStackLayout>
 
@@ -210,8 +239,8 @@
                         <Button Grid.Column="1"
                                 Text="Complete Payment &amp; Generate Receipt"
                                 Style="{StaticResource PrimaryBlackButton}"
-                                Command="{Binding CompletePaymentTransactionCommand}"
-                                IsEnabled="{Binding IsNotBusy}" />
+                                IsEnabled="{Binding CanCompletePayment}"
+                                Command="{Binding CompletePaymentTransactionCommand}" />
                     </Grid>
 
                 </VerticalStackLayout>

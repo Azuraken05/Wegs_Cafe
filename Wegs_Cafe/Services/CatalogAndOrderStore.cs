@@ -1,10 +1,12 @@
 using System.Globalization;
+using Firebase.Database.Query;
 using Wegs_Cafe.Models;
 
 namespace Wegs_Cafe.Services;
 
 /// <summary>
-/// Atomic data store for products, inventory_logs, and orders using the full snake_case schema.
+/// Atomic data store for products, inventory_logs, and orders using the full snake_case schema,
+/// with Firebase Realtime Database synchronization for Laravel interoperability.
 /// </summary>
 public class CatalogAndOrderStore : IProductManagementService, IInventoryManagementService, IOrderTransactionService
 {
@@ -12,11 +14,12 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
     private readonly IAuditTrailService _auditTrailService;
     private readonly IImageStorageService _imageStorageService;
     private readonly IAuthenticationService _authenticationService;
+    private readonly FirebaseService _firebaseService;
     private readonly SemaphoreSlim _mutex = new(1, 1);
 
-    private readonly string _productsFilePath = Path.Combine(FileSystem.AppDataDirectory, "products_v2.json");
-    private readonly string _inventoryLogsFilePath = Path.Combine(FileSystem.AppDataDirectory, "inventory_logs_v2.json");
-    private readonly string _ordersFilePath = Path.Combine(FileSystem.AppDataDirectory, "orders_v2.json");
+    private readonly string _productsFilePath = Path.Combine(FileSystem.AppDataDirectory, "products_v3.json");
+    private readonly string _inventoryLogsFilePath = Path.Combine(FileSystem.AppDataDirectory, "inventory_logs_v3.json");
+    private readonly string _ordersFilePath = Path.Combine(FileSystem.AppDataDirectory, "orders_v3.json");
 
     public event EventHandler? InventoryChanged;
 
@@ -24,12 +27,14 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         SessionService sessionService,
         IAuditTrailService auditTrailService,
         IImageStorageService imageStorageService,
-        IAuthenticationService authenticationService)
+        IAuthenticationService authenticationService,
+        FirebaseService firebaseService)
     {
         _sessionService = sessionService;
         _auditTrailService = auditTrailService;
         _imageStorageService = imageStorageService;
         _authenticationService = authenticationService;
+        _firebaseService = firebaseService;
     }
 
     private void RaiseInventoryChanged()
@@ -58,10 +63,8 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
     public async Task<Product> SaveProductAsync(Product inputProduct)
     {
-        if (!_sessionService.CanAccessProductRegistration)
+        if (!_sessionService.CanRegisterProducts)
             throw new UnauthorizedAccessException("You do not have permission to register or edit products.");
-
-        ValidateProduct(inputProduct);
 
         Product savedProduct;
         string? auditAction = null;
@@ -72,20 +75,29 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         try
         {
             var products = await EnsureProductsSeededAsync();
-            var cleanSku = inputProduct.StockKeepingUnit.Trim();
             var existing = products.FirstOrDefault(p =>
                 !string.IsNullOrWhiteSpace(inputProduct.ProductIdentifier) &&
                 p.ProductIdentifier == inputProduct.ProductIdentifier);
 
-            if (products.Any(p =>
-                    p.StockKeepingUnit.Equals(cleanSku, StringComparison.OrdinalIgnoreCase) &&
-                    p.ProductIdentifier != existing?.ProductIdentifier))
-            {
-                throw new ValidationException("Another product already uses that Stock Keeping Unit (SKU).");
-            }
+            var existingSkus = products
+                .Where(p => p.ProductIdentifier != existing?.ProductIdentifier)
+                .Select(p => p.StockKeepingUnit);
+
+            var validation = ValidationRules.ValidateProductRegistration(
+                inputProduct.ProductName,
+                inputProduct.StockKeepingUnit,
+                inputProduct.Category,
+                inputProduct.SellingPrice.ToString(CultureInfo.InvariantCulture),
+                inputProduct.CostPrice.ToString(CultureInfo.InvariantCulture),
+                inputProduct.StockQuantity.ToString(CultureInfo.InvariantCulture),
+                inputProduct.LowStockThreshold.ToString(CultureInfo.InvariantCulture),
+                existingSkus);
+
+            if (!validation.IsValid)
+                throw new ValidationException(validation.FirstErrorOrEmpty);
 
             savedProduct = inputProduct.Clone();
-            savedProduct.StockKeepingUnit = cleanSku;
+            savedProduct.StockKeepingUnit = inputProduct.StockKeepingUnit.Trim().ToUpperInvariant();
             savedProduct.ProductName = inputProduct.ProductName.Trim();
             savedProduct.UpdatedAt = IsoTimestamp.Now();
 
@@ -102,7 +114,8 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                         InventoryMovementTypes.StockReplenishment,
                         savedProduct.StockQuantity,
                         0,
-                        savedProduct.StockQuantity);
+                        savedProduct.StockQuantity,
+                        "Initial product registration stock");
                 }
 
                 auditAction = AuditActionTypes.CreateProduct;
@@ -152,12 +165,46 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         }
 
         RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Products, savedProduct.ProductIdentifier, savedProduct);
         return FilterSensitiveFields(savedProduct);
+    }
+
+    public async Task<Product> ToggleProductAvailabilityAsync(string productIdentifier, bool isAvailable)
+    {
+        if (!_sessionService.CanAccessPointOfSale)
+            throw new UnauthorizedAccessException("Please sign in to update item availability.");
+
+        Product updatedProduct;
+        await _mutex.WaitAsync();
+        try
+        {
+            var products = await EnsureProductsSeededAsync();
+            var product = products.FirstOrDefault(p => p.ProductIdentifier == productIdentifier)
+                          ?? throw new ValidationException("Product was not found.");
+
+            product.IsAvailable = isAvailable;
+            product.UpdatedAt = IsoTimestamp.Now();
+            updatedProduct = product.Clone();
+            await JsonStorageFile.WriteListAsync(_productsFilePath, products);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        await _auditTrailService.RecordAuditEntryAsync(
+            AuditActionTypes.ToggleProductAvailability,
+            $"products/{productIdentifier}",
+            $"Marked '{updatedProduct.ProductName}' as {(isAvailable ? "Available" : "Sold Out / Unavailable")}.");
+
+        RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Products, updatedProduct.ProductIdentifier, updatedProduct);
+        return FilterSensitiveFields(updatedProduct);
     }
 
     public async Task DeleteProductAsync(string productIdentifier)
     {
-        if (!_sessionService.CanAccessProductRegistration)
+        if (!_sessionService.CanRegisterProducts)
             throw new UnauthorizedAccessException("You do not have permission to delete products.");
 
         Product deletedProduct;
@@ -185,21 +232,19 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             $"Deleted product '{deletedProduct.ProductName}' ({deletedProduct.StockKeepingUnit}).");
 
         RaiseInventoryChanged();
+        await DeleteFromFirebaseAsync(DatabaseNodes.Products, productIdentifier);
     }
 
     // ================= INVENTORY =================
 
-    public async Task<Product> RecordStockMovementAsync(string productIdentifier, string movementType, int quantityChanged)
+    public async Task<Product> RecordStockMovementAsync(
+        string productIdentifier,
+        string movementType,
+        int quantityChanged,
+        string remarks = "")
     {
-        if (!_sessionService.CanModifyInventoryStock)
-            throw new UnauthorizedAccessException("You do not have permission to modify inventory stock.");
-
-        if (quantityChanged == 0)
-            throw new ValidationException("Quantity changed cannot be zero.");
-        if (movementType == InventoryMovementTypes.StockReplenishment && quantityChanged < 0)
-            throw new ValidationException("Stock replenishment quantity must be positive.");
-        if (movementType == InventoryMovementTypes.SpoilageOrWaste && quantityChanged > 0)
-            throw new ValidationException("Spoilage or waste quantity must be negative.");
+        if (!_sessionService.CanRestockInventory)
+            throw new UnauthorizedAccessException("You do not have permission to restock or adjust inventory.");
 
         Product updatedProduct;
         int previousQuantity;
@@ -212,17 +257,30 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             var product = products.FirstOrDefault(p => p.ProductIdentifier == productIdentifier)
                           ?? throw new ValidationException("Product was not found.");
 
+            var validation = ValidationRules.ValidateInventoryAdjustment(
+                product.StockQuantity,
+                movementType,
+                quantityChanged.ToString(CultureInfo.InvariantCulture),
+                remarks);
+
+            if (!validation.IsValid)
+                throw new ValidationException(validation.FirstErrorOrEmpty);
+
             previousQuantity = product.StockQuantity;
             newQuantity = previousQuantity + quantityChanged;
-            if (newQuantity < 0)
-                throw new ValidationException($"Insufficient stock. Current stock is {previousQuantity} {product.MeasurementUnit}.");
 
             product.StockQuantity = newQuantity;
             product.UpdatedAt = IsoTimestamp.Now();
             updatedProduct = product.Clone();
 
             await JsonStorageFile.WriteListAsync(_productsFilePath, products);
-            await AppendInventoryLogInternalAsync(product, movementType, quantityChanged, previousQuantity, newQuantity);
+            await AppendInventoryLogInternalAsync(
+                product,
+                movementType,
+                quantityChanged,
+                previousQuantity,
+                newQuantity,
+                remarks?.Trim() ?? string.Empty);
         }
         finally
         {
@@ -239,12 +297,15 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             $"{movementType}: '{updatedProduct.ProductName}' stock changed from {previousQuantity} to {newQuantity} ({quantityChanged:+#;-#;0} {updatedProduct.MeasurementUnit}).");
 
         RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Products, updatedProduct.ProductIdentifier, updatedProduct);
         return FilterSensitiveFields(updatedProduct);
     }
 
     public async Task<IReadOnlyList<InventoryLog>> GetInventoryLogsAsync()
     {
-        RequireAuthenticated();
+        if (!_sessionService.CanViewInventory)
+            throw new UnauthorizedAccessException("You do not have permission to view inventory logs.");
+
         await _mutex.WaitAsync();
         try
         {
@@ -288,17 +349,23 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                 if (cartLine.Quantity <= 0)
                     throw new ValidationException("Item quantity must be at least 1.");
                 if (!product.IsAvailable)
-                    throw new ValidationException($"'{product.ProductName}' is currently unavailable.");
+                    throw new ValidationException($"'{product.ProductName}' is currently marked Sold Out / Unavailable.");
                 if (product.StockQuantity < cartLine.Quantity)
                     throw new ValidationException($"Insufficient stock for '{product.ProductName}'. Remaining: {product.StockQuantity} {product.MeasurementUnit}.");
 
+                var unitPriceWithModifiers = product.SellingPrice + cartLine.ModifierSurcharge;
                 orderItems.Add(new OrderItem
                 {
                     ProductIdentifier = product.ProductIdentifier,
                     ProductName = product.ProductName,
                     Quantity = cartLine.Quantity,
-                    UnitPrice = product.SellingPrice,
-                    LineSubtotal = product.SellingPrice * cartLine.Quantity,
+                    UnitPrice = unitPriceWithModifiers,
+                    LineSubtotal = unitPriceWithModifiers * cartLine.Quantity,
+                    CupSize = cartLine.CupSize,
+                    IceLevel = cartLine.IceLevel,
+                    SweetnessLevel = cartLine.SweetnessLevel,
+                    AddOns = cartLine.AddOns.ToList(),
+                    ModifierSurcharge = cartLine.ModifierSurcharge,
                     PreparationNotes = cartLine.PreparationNotes?.Trim() ?? string.Empty
                 });
 
@@ -309,41 +376,27 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             var discountAmount = request.DiscountAmount;
             if (discountAmount < 0 || discountAmount > subtotalAmount)
                 throw new ValidationException("Discount amount must be between ₱0.00 and the subtotal.");
-            if (discountAmount > 0 && !_sessionService.CanAccessProductRegistration)
-                throw new UnauthorizedAccessException("Only the Owner or a Manager can apply discounts.");
+            if (discountAmount > 0 && !_sessionService.CanRegisterProducts)
+                throw new UnauthorizedAccessException("Only the Owner or permitted roles can apply discounts.");
 
             var totalAmount = subtotalAmount - discountAmount;
-            decimal amountTendered;
-            decimal changeDue;
-            var referenceNumber = request.PaymentReferenceNumber?.Trim() ?? string.Empty;
 
-            switch (request.PaymentMethod)
-            {
-                case PaymentMethods.Cash:
-                    if (request.AmountTendered < totalAmount)
-                        throw new ValidationException("Amount tendered is less than the total amount due.");
-                    amountTendered = request.AmountTendered;
-                    changeDue = amountTendered - totalAmount;
-                    referenceNumber = string.Empty;
-                    break;
+            var checkoutValidation = ValidationRules.ValidatePointOfSaleCheckout(
+                orderItems.Count,
+                request.CustomerOrTableLabel,
+                request.PaymentMethod,
+                totalAmount,
+                request.AmountTendered.ToString(CultureInfo.InvariantCulture),
+                request.PaymentReferenceNumber);
 
-                case PaymentMethods.GCash:
-                    if (referenceNumber.Length < 4)
-                        throw new ValidationException("Please enter the mandatory GCash Reference Number.");
-                    amountTendered = totalAmount;
-                    changeDue = 0m;
-                    break;
+            if (!checkoutValidation.IsValid)
+                throw new ValidationException(checkoutValidation.FirstErrorOrEmpty);
 
-                case PaymentMethods.CreditCard:
-                    if (referenceNumber.Length < 4)
-                        throw new ValidationException("Please enter the mandatory Credit Card Approval / Trace Reference Number.");
-                    amountTendered = totalAmount;
-                    changeDue = 0m;
-                    break;
-
-                default:
-                    throw new ValidationException("Please select a valid payment method.");
-            }
+            var amountTendered = request.PaymentMethod == PaymentMethods.Cash ? request.AmountTendered : totalAmount;
+            var changeDue = request.PaymentMethod == PaymentMethods.Cash ? amountTendered - totalAmount : 0m;
+            var referenceNumber = request.PaymentMethod == PaymentMethods.Cash
+                ? string.Empty
+                : request.PaymentReferenceNumber?.Trim() ?? string.Empty;
 
             var datePrefix = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
             var sequenceNumber = orders.Count(o => o.ReceiptNumber.StartsWith($"WEGS-{datePrefix}-")) + 1;
@@ -354,6 +407,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                 ReceiptNumber = $"WEGS-{datePrefix}-{sequenceNumber:0000}",
                 OrderType = request.OrderType,
                 CustomerOrTableLabel = request.CustomerOrTableLabel?.Trim() ?? string.Empty,
+                PreparationStatus = OrderPreparationStatuses.Preparing,
                 OrderItems = orderItems,
                 SubtotalAmount = subtotalAmount,
                 DiscountAmount = discountAmount,
@@ -363,8 +417,8 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                 AmountTendered = amountTendered,
                 ChangeDue = changeDue,
                 OrderStatus = OrderStatuses.Completed,
-                CashierIdentifier = _sessionService.CurrentUser!.UserIdentifier,
-                CashierName = _sessionService.CurrentUser!.FullName,
+                BaristaIdentifier = _sessionService.CurrentUser!.UserIdentifier,
+                BaristaName = _sessionService.CurrentUser!.FullName,
                 CreatedAt = IsoTimestamp.Now()
             };
 
@@ -386,6 +440,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                     QuantityChanged = -quantitySold,
                     PreviousStockQuantity = previousStock,
                     NewStockQuantity = product.StockQuantity,
+                    Remarks = $"Order {completedOrder.ReceiptNumber}",
                     PerformedByIdentifier = _sessionService.CurrentUser!.UserIdentifier,
                     PerformedByName = _sessionService.CurrentUser!.FullName,
                     RecordedAt = IsoTimestamp.Now()
@@ -409,6 +464,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             $"Completed checkout {completedOrder.ReceiptNumber}: ₱{completedOrder.TotalAmount:N2} via {completedOrder.PaymentMethod} ({totalItemsCount} items).");
 
         RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Orders, completedOrder.OrderIdentifier, completedOrder);
         return completedOrder;
     }
 
@@ -419,16 +475,43 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         try
         {
             var allOrders = await EnsureOrdersSeededAsync();
-            var visibleOrders = _sessionService.IsOwner || _sessionService.IsManager
-                ? allOrders
-                : allOrders.Where(o => o.CashierIdentifier == _sessionService.CurrentUser!.UserIdentifier).ToList();
-
-            return visibleOrders.OrderByDescending(o => o.CreatedAt).ToList();
+            return allOrders.OrderByDescending(o => o.CreatedAt).ToList();
         }
         finally
         {
             _mutex.Release();
         }
+    }
+
+    public async Task<Order> UpdateOrderPreparationStatusAsync(string orderIdentifier, string preparationStatus)
+    {
+        if (!_sessionService.CanAccessPointOfSale)
+            throw new UnauthorizedAccessException("Please sign in to update order preparation status.");
+
+        Order updatedOrder;
+        await _mutex.WaitAsync();
+        try
+        {
+            var orders = await EnsureOrdersSeededAsync();
+            var targetOrder = orders.FirstOrDefault(o => o.OrderIdentifier == orderIdentifier)
+                              ?? throw new ValidationException("Order was not found.");
+
+            targetOrder.PreparationStatus = preparationStatus;
+            updatedOrder = targetOrder;
+            await JsonStorageFile.WriteListAsync(_ordersFilePath, orders);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        await _auditTrailService.RecordAuditEntryAsync(
+            AuditActionTypes.UpdateOrderPreparationStatus,
+            $"orders/{orderIdentifier}",
+            $"Updated order {updatedOrder.ReceiptNumber} preparation status to '{preparationStatus}'.");
+
+        await SyncToFirebaseAsync(DatabaseNodes.Orders, updatedOrder.OrderIdentifier, updatedOrder);
+        return updatedOrder;
     }
 
     public async Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin)
@@ -464,10 +547,11 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                     InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
                     ProductIdentifier = product.ProductIdentifier,
                     ProductName = product.ProductName,
-                    MovementType = InventoryMovementTypes.ManualAdjustment,
+                    MovementType = InventoryMovementTypes.ManualCorrection,
                     QuantityChanged = item.Quantity,
                     PreviousStockQuantity = previousStock,
                     NewStockQuantity = product.StockQuantity,
+                    Remarks = $"Voided Order {targetOrder.ReceiptNumber}",
                     PerformedByIdentifier = authorizer.UserIdentifier,
                     PerformedByName = authorizer.FullName,
                     RecordedAt = IsoTimestamp.Now()
@@ -475,6 +559,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             }
 
             targetOrder.OrderStatus = OrderStatuses.Voided;
+            targetOrder.PreparationStatus = OrderStatuses.Voided;
             targetOrder.VoidedAt = IsoTimestamp.Now();
             targetOrder.VoidedByIdentifier = authorizer.UserIdentifier;
             voidedOrder = targetOrder;
@@ -494,15 +579,22 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             $"Voided order {voidedOrder.ReceiptNumber} (₱{voidedOrder.TotalAmount:N2}) and restored stock. Authorized by {authorizer.FullName} ({authorizer.RoleDisplayName}).");
 
         RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Orders, voidedOrder.OrderIdentifier, voidedOrder);
         return voidedOrder;
     }
 
     // ================= SEEDING & HELPERS =================
 
-    private async Task AppendInventoryLogInternalAsync(Product product, string movementType, int quantityChanged, int previousQuantity, int newQuantity)
+    private async Task AppendInventoryLogInternalAsync(
+        Product product,
+        string movementType,
+        int quantityChanged,
+        int previousQuantity,
+        int newQuantity,
+        string remarks)
     {
         var logs = await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath);
-        logs.Add(new InventoryLog
+        var log = new InventoryLog
         {
             InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
             ProductIdentifier = product.ProductIdentifier,
@@ -511,11 +603,44 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             QuantityChanged = quantityChanged,
             PreviousStockQuantity = previousQuantity,
             NewStockQuantity = newQuantity,
+            Remarks = remarks,
             PerformedByIdentifier = _sessionService.CurrentUser?.UserIdentifier ?? "system",
             PerformedByName = _sessionService.CurrentUser?.FullName ?? "System",
             RecordedAt = IsoTimestamp.Now()
-        });
+        };
+        logs.Add(log);
         await JsonStorageFile.WriteListAsync(_inventoryLogsFilePath, logs);
+        await SyncToFirebaseAsync(DatabaseNodes.InventoryLogs, log.InventoryLogIdentifier, log);
+    }
+
+    private async Task SyncToFirebaseAsync<T>(string node, string key, T payload)
+    {
+        try
+        {
+            await _firebaseService.RealtimeDatabaseClient
+                .Child(node)
+                .Child(key)
+                .PutAsync(payload);
+        }
+        catch
+        {
+            // Offline-first resilience: local JSON remains authoritative when offline
+        }
+    }
+
+    private async Task DeleteFromFirebaseAsync(string node, string key)
+    {
+        try
+        {
+            await _firebaseService.RealtimeDatabaseClient
+                .Child(node)
+                .Child(key)
+                .DeleteAsync();
+        }
+        catch
+        {
+            // Offline-first resilience
+        }
     }
 
     private Product FilterSensitiveFields(Product product)
@@ -532,26 +657,6 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             throw new UnauthorizedAccessException("Please sign in to continue.");
     }
 
-    private static void ValidateProduct(Product product)
-    {
-        if (string.IsNullOrWhiteSpace(product.ProductName))
-            throw new ValidationException("Please enter the product name.");
-        if (string.IsNullOrWhiteSpace(product.StockKeepingUnit))
-            throw new ValidationException("Please enter the Stock Keeping Unit (SKU).");
-        if (!ProductCategories.All.Contains(product.Category))
-            throw new ValidationException("Please select a valid category.");
-        if (product.SellingPrice <= 0)
-            throw new ValidationException("Selling price must be greater than zero.");
-        if (product.CostPrice < 0)
-            throw new ValidationException("Cost price cannot be negative.");
-        if (product.StockQuantity < 0)
-            throw new ValidationException("Stock quantity cannot be negative.");
-        if (product.LowStockThreshold < 0)
-            throw new ValidationException("Low-stock threshold cannot be negative.");
-        if (string.IsNullOrWhiteSpace(product.MeasurementUnit))
-            throw new ValidationException("Please specify a measurement unit.");
-    }
-
     private async Task<List<Product>> EnsureProductsSeededAsync()
     {
         if (File.Exists(_productsFilePath))
@@ -562,16 +667,17 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
         var seededProducts = new List<Product>
         {
-            new() { ProductIdentifier = "product-spanish-latte", StockKeepingUnit = "COF-001", ProductName = "Spanish Latte", Category = ProductCategories.Coffee, SellingPrice = 140m, CostPrice = 45m, StockQuantity = 42, LowStockThreshold = 10, MeasurementUnit = "cups" },
-            new() { ProductIdentifier = "product-iced-americano", StockKeepingUnit = "COF-002", ProductName = "Iced Americano", Category = ProductCategories.Coffee, SellingPrice = 110m, CostPrice = 30m, StockQuantity = 38, LowStockThreshold = 10, MeasurementUnit = "cups" },
-            new() { ProductIdentifier = "product-caramel-macchiato", StockKeepingUnit = "COF-003", ProductName = "Caramel Macchiato", Category = ProductCategories.Coffee, SellingPrice = 155m, CostPrice = 52m, StockQuantity = 8, LowStockThreshold = 10, MeasurementUnit = "cups" },
-            new() { ProductIdentifier = "product-dirty-matcha", StockKeepingUnit = "NCF-001", ProductName = "Dirty Matcha Latte", Category = ProductCategories.NonCoffee, SellingPrice = 160m, CostPrice = 58m, StockQuantity = 25, LowStockThreshold = 10, MeasurementUnit = "cups" },
-            new() { ProductIdentifier = "product-hot-chocolate", StockKeepingUnit = "NCF-002", ProductName = "Belgian Hot Chocolate", Category = ProductCategories.NonCoffee, SellingPrice = 135m, CostPrice = 44m, StockQuantity = 20, LowStockThreshold = 8, MeasurementUnit = "cups" },
-            new() { ProductIdentifier = "product-butter-croissant", StockKeepingUnit = "PAS-001", ProductName = "Butter Croissant", Category = ProductCategories.Pastries, SellingPrice = 95m, CostPrice = 35m, StockQuantity = 5, LowStockThreshold = 8, MeasurementUnit = "pieces" },
-            new() { ProductIdentifier = "product-basque-cheesecake", StockKeepingUnit = "PAS-002", ProductName = "Burnt Basque Cheesecake", Category = ProductCategories.Pastries, SellingPrice = 175m, CostPrice = 65m, StockQuantity = 14, LowStockThreshold = 5, MeasurementUnit = "slices" },
-            new() { ProductIdentifier = "product-truffle-pasta", StockKeepingUnit = "MEL-001", ProductName = "Truffle Cream Pasta", Category = ProductCategories.Meals, SellingPrice = 220m, CostPrice = 85m, StockQuantity = 16, LowStockThreshold = 5, MeasurementUnit = "servings" },
-            new() { ProductIdentifier = "product-beef-tapa", StockKeepingUnit = "MEL-002", ProductName = "Wegs Beef Tapa Bowl", Category = ProductCategories.Meals, SellingPrice = 195m, CostPrice = 75m, StockQuantity = 18, LowStockThreshold = 5, MeasurementUnit = "servings" },
-            new() { ProductIdentifier = "product-oat-milk", StockKeepingUnit = "ADD-001", ProductName = "Oat Milk Upgrade", Category = ProductCategories.AddOns, SellingPrice = 35m, CostPrice = 12m, StockQuantity = 50, LowStockThreshold = 10, MeasurementUnit = "servings" }
+            new() { ProductIdentifier = "product-spanish-latte-hot", StockKeepingUnit = "WEGS-HOT-01", ProductName = "Hot Spanish Latte", Category = ProductCategories.HotCoffee, SellingPrice = 140m, CostPrice = 45m, StockQuantity = 42, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-americano-hot", StockKeepingUnit = "WEGS-HOT-02", ProductName = "Hot Americano", Category = ProductCategories.HotCoffee, SellingPrice = 105m, CostPrice = 28m, StockQuantity = 38, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-iced-spanish-latte", StockKeepingUnit = "WEGS-ICE-01", ProductName = "Iced Spanish Latte", Category = ProductCategories.IcedCoffee, SellingPrice = 150m, CostPrice = 48m, StockQuantity = 35, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-iced-caramel-macchiato", StockKeepingUnit = "WEGS-ICE-02", ProductName = "Iced Caramel Macchiato", Category = ProductCategories.IcedCoffee, SellingPrice = 155m, CostPrice = 52m, StockQuantity = 8, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-dirty-matcha", StockKeepingUnit = "WEGS-NCF-01", ProductName = "Iced Matcha Latte", Category = ProductCategories.NonCoffee, SellingPrice = 160m, CostPrice = 58m, StockQuantity = 25, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-hot-chocolate", StockKeepingUnit = "WEGS-NCF-02", ProductName = "Belgian Hot Chocolate", Category = ProductCategories.NonCoffee, SellingPrice = 135m, CostPrice = 44m, StockQuantity = 20, LowStockThreshold = 8, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new() { ProductIdentifier = "product-butter-croissant", StockKeepingUnit = "WEGS-PAS-01", ProductName = "Butter Croissant", Category = ProductCategories.Pastries, SellingPrice = 95m, CostPrice = 35m, StockQuantity = 5, LowStockThreshold = 8, MeasurementUnit = "pieces", AllowDrinkModifiers = false },
+            new() { ProductIdentifier = "product-basque-cheesecake", StockKeepingUnit = "WEGS-PAS-02", ProductName = "Burnt Basque Cheesecake", Category = ProductCategories.Pastries, SellingPrice = 175m, CostPrice = 65m, StockQuantity = 14, LowStockThreshold = 5, MeasurementUnit = "slices", AllowDrinkModifiers = false },
+            new() { ProductIdentifier = "product-truffle-pasta", StockKeepingUnit = "WEGS-MEL-01", ProductName = "Truffle Cream Pasta", Category = ProductCategories.Meals, SellingPrice = 220m, CostPrice = 85m, StockQuantity = 16, LowStockThreshold = 5, MeasurementUnit = "servings", AllowDrinkModifiers = false },
+            new() { ProductIdentifier = "product-beef-tapa", StockKeepingUnit = "WEGS-MEL-02", ProductName = "Wegs Beef Tapa Bowl", Category = ProductCategories.Meals, SellingPrice = 195m, CostPrice = 75m, StockQuantity = 18, LowStockThreshold = 5, MeasurementUnit = "servings", AllowDrinkModifiers = false },
+            new() { ProductIdentifier = "product-oat-milk", StockKeepingUnit = "WEGS-ADD-01", ProductName = "Oat Milk Upgrade", Category = ProductCategories.AddOns, SellingPrice = 35m, CostPrice = 12m, StockQuantity = 50, LowStockThreshold = 10, MeasurementUnit = "servings", AllowDrinkModifiers = false }
         };
 
         await JsonStorageFile.WriteListAsync(_productsFilePath, seededProducts);
@@ -586,79 +692,41 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
             if (existing.Count > 0) return existing;
         }
 
-        Order BuildSampleOrder(
-            int sequence,
-            DateTime localTimestamp,
-            string orderType,
-            string customerOrTable,
-            string paymentMethod,
-            string referenceNumber,
-            params (string productId, string productName, int quantity, decimal unitPrice)[] lines)
-        {
-            var orderItems = lines.Select(line => new OrderItem
-            {
-                ProductIdentifier = line.productId,
-                ProductName = line.productName,
-                Quantity = line.quantity,
-                UnitPrice = line.unitPrice,
-                LineSubtotal = line.quantity * line.unitPrice,
-                PreparationNotes = string.Empty
-            }).ToList();
-
-            var subtotal = orderItems.Sum(i => i.LineSubtotal);
-            return new Order
-            {
-                OrderIdentifier = Guid.NewGuid().ToString("N"),
-                ReceiptNumber = $"WEGS-{localTimestamp:yyyyMMdd}-{sequence:0000}",
-                OrderType = orderType,
-                CustomerOrTableLabel = customerOrTable,
-                OrderItems = orderItems,
-                SubtotalAmount = subtotal,
-                DiscountAmount = 0m,
-                TotalAmount = subtotal,
-                PaymentMethod = paymentMethod,
-                PaymentReferenceNumber = referenceNumber,
-                AmountTendered = subtotal,
-                ChangeDue = 0m,
-                OrderStatus = OrderStatuses.Completed,
-                CashierIdentifier = "owner-0001",
-                CashierName = "Weg's Cafe Owner",
-                CreatedAt = IsoTimestamp.From(localTimestamp)
-            };
-        }
-
         var today = DateTime.Now.Date;
-        var seededOrders = new List<Order>
+        var sampleOrder = new Order
         {
-            BuildSampleOrder(1, today.AddHours(8).AddMinutes(15), OrderTypes.DineIn, "Table 2", PaymentMethods.Cash, "",
-                ("product-spanish-latte", "Spanish Latte", 2, 140m),
-                ("product-butter-croissant", "Butter Croissant", 2, 95m)),
-            BuildSampleOrder(2, today.AddHours(9).AddMinutes(40), OrderTypes.TakeOut, "Walk-in Customer", PaymentMethods.GCash, "901284112",
-                ("product-iced-americano", "Iced Americano", 3, 110m),
-                ("product-oat-milk", "Oat Milk Upgrade", 1, 35m)),
-            BuildSampleOrder(3, today.AddHours(11).AddMinutes(20), OrderTypes.DineIn, "Table 5", PaymentMethods.CreditCard, "482910",
-                ("product-truffle-pasta", "Truffle Cream Pasta", 2, 220m),
-                ("product-dirty-matcha", "Dirty Matcha Latte", 2, 160m)),
-            BuildSampleOrder(4, today.AddHours(13).AddMinutes(5), OrderTypes.DineIn, "Table 1", PaymentMethods.Cash, "",
-                ("product-beef-tapa", "Wegs Beef Tapa Bowl", 2, 195m),
-                ("product-caramel-macchiato", "Caramel Macchiato", 2, 155m)),
-            BuildSampleOrder(5, today.AddHours(15).AddMinutes(30), OrderTypes.TakeOut, "Take-Out Counter", PaymentMethods.GCash, "901299871",
-                ("product-basque-cheesecake", "Burnt Basque Cheesecake", 2, 175m),
-                ("product-spanish-latte", "Spanish Latte", 1, 140m)),
-            BuildSampleOrder(1, today.AddDays(-1).AddHours(10), OrderTypes.DineIn, "Table 3", PaymentMethods.Cash, "",
-                ("product-spanish-latte", "Spanish Latte", 3, 140m),
-                ("product-truffle-pasta", "Truffle Cream Pasta", 1, 220m)),
-            BuildSampleOrder(2, today.AddDays(-1).AddHours(14), OrderTypes.TakeOut, "Walk-in Customer", PaymentMethods.GCash, "881920114",
-                ("product-dirty-matcha", "Dirty Matcha Latte", 2, 160m),
-                ("product-butter-croissant", "Butter Croissant", 3, 95m)),
-            BuildSampleOrder(1, today.AddDays(-2).AddHours(11), OrderTypes.DineIn, "Table 4", PaymentMethods.CreditCard, "771209",
-                ("product-beef-tapa", "Wegs Beef Tapa Bowl", 3, 195m),
-                ("product-iced-americano", "Iced Americano", 3, 110m)),
-            BuildSampleOrder(1, today.AddDays(-3).AddHours(16), OrderTypes.DineIn, "Table 2", PaymentMethods.Cash, "",
-                ("product-caramel-macchiato", "Caramel Macchiato", 4, 155m),
-                ("product-basque-cheesecake", "Burnt Basque Cheesecake", 2, 175m))
+            OrderIdentifier = Guid.NewGuid().ToString("N"),
+            ReceiptNumber = $"WEGS-{today:yyyyMMdd}-0001",
+            OrderType = OrderTypes.DineIn,
+            CustomerOrTableLabel = "Table 2",
+            PreparationStatus = OrderPreparationStatuses.Preparing,
+            OrderItems = new List<OrderItem>
+            {
+                new()
+                {
+                    ProductIdentifier = "product-iced-spanish-latte",
+                    ProductName = "Iced Spanish Latte",
+                    Quantity = 2,
+                    UnitPrice = 150m,
+                    LineSubtotal = 300m,
+                    CupSize = "Regular",
+                    IceLevel = "Less Ice",
+                    SweetnessLevel = "75%"
+                }
+            },
+            SubtotalAmount = 300m,
+            DiscountAmount = 0m,
+            TotalAmount = 300m,
+            PaymentMethod = PaymentMethods.Cash,
+            AmountTendered = 300m,
+            ChangeDue = 0m,
+            OrderStatus = OrderStatuses.Completed,
+            BaristaIdentifier = "owner-0001",
+            BaristaName = "Wegs Cafe Owner",
+            CreatedAt = IsoTimestamp.From(today.AddHours(9).AddMinutes(15))
         };
 
+        var seededOrders = new List<Order> { sampleOrder };
         await JsonStorageFile.WriteListAsync(_ordersFilePath, seededOrders);
         return seededOrders;
     }

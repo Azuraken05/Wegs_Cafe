@@ -15,7 +15,7 @@ public class InventoryLog
     public string ProductName { get; set; } = string.Empty;
 
     [JsonProperty("movement_type")]
-    public string MovementType { get; set; } = InventoryMovementTypes.ManualAdjustment;
+    public string MovementType { get; set; } = InventoryMovementTypes.ManualCorrection;
 
     [JsonProperty("quantity_changed")]
     public int QuantityChanged { get; set; }
@@ -25,6 +25,9 @@ public class InventoryLog
 
     [JsonProperty("new_stock_quantity")]
     public int NewStockQuantity { get; set; }
+
+    [JsonProperty("remarks")]
+    public string Remarks { get; set; } = string.Empty;
 
     [JsonProperty("performed_by_identifier")]
     public string PerformedByIdentifier { get; set; } = string.Empty;

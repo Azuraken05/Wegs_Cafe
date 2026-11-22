@@ -7,21 +7,22 @@
     Title="Weg's Cafe"
     FlyoutBehavior="Flyout"
     FlyoutWidth="290"
-    FlyoutBackgroundColor="{StaticResource PrimaryBlack}"
+    FlyoutBackgroundColor="{StaticResource OffWhiteCream}"
     Shell.BackgroundColor="{StaticResource PrimaryBlack}"
     Shell.ForegroundColor="{StaticResource PureWhite}"
     Shell.TitleColor="{StaticResource PureWhite}">
 
-    <!-- Monochrome Sidebar Flyout Item Template with Google Material Symbols SVG Icons -->
+    <!-- Monochrome Sidebar Flyout Item Template (OffWhiteCream canvas + PrimaryBlack active item) -->
     <Shell.ItemTemplate>
         <DataTemplate>
             <Grid Padding="14,4">
                 <Border x:Name="FlyoutItemBorder"
-                        StrokeThickness="0"
-                        Padding="14,12"
+                        StrokeThickness="1"
+                        Stroke="Transparent"
+                        Padding="12,10"
                         BackgroundColor="Transparent">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="12" />
+                        <RoundRectangle CornerRadius="14" />
                     </Border.StrokeShape>
                     <VisualStateManager.VisualStateGroups>
                         <VisualStateGroupList>
@@ -29,28 +30,48 @@
                                 <VisualState x:Name="Normal">
                                     <VisualState.Setters>
                                         <Setter Property="BackgroundColor" Value="Transparent" />
+                                        <Setter Property="Stroke" Value="Transparent" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Selected">
                                     <VisualState.Setters>
-                                        <Setter Property="BackgroundColor" Value="{StaticResource CharcoalSurface}" />
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="Stroke" Value="{StaticResource PrimaryBlack}" />
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateGroupList>
                     </VisualStateManager.VisualStateGroups>
-                    <Grid ColumnDefinitions="24,*" ColumnSpacing="14" VerticalOptions="Center">
-                        <Image Grid.Column="0"
-                               Source="{Binding FlyoutIcon}"
-                               WidthRequest="20"
-                               HeightRequest="20"
-                               VerticalOptions="Center" />
+                    <Grid ColumnDefinitions="34,*" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                BackgroundColor="{StaticResource PrimaryBlack}"
+                                WidthRequest="32"
+                                HeightRequest="32"
+                                StrokeThickness="0"
+                                VerticalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10" />
+                            </Border.StrokeShape>
+                            <Image Source="{Binding FlyoutIcon}"
+                                   WidthRequest="18"
+                                   HeightRequest="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
                         <Label Grid.Column="1"
                                Text="{Binding Title}"
-                               TextColor="{StaticResource PureWhite}"
+                               TextColor="{StaticResource PrimaryBlack}"
                                FontFamily="QuicksandBold"
                                FontSize="14"
-                               VerticalOptions="Center" />
+                               VerticalOptions="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label"
+                                             Binding="{Binding Source={x:Reference FlyoutItemBorder}, Path=BackgroundColor}"
+                                             Value="{StaticResource PrimaryBlack}">
+                                    <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
                     </Grid>
                 </Border>
             </Grid>
@@ -59,20 +80,30 @@
 
     <Shell.MenuItemTemplate>
         <DataTemplate>
-            <Grid Padding="14,10">
+            <Grid Padding="14,12">
                 <Border Stroke="{StaticResource StatusDanger}"
                         StrokeThickness="1"
-                        Padding="14,12"
-                        BackgroundColor="{StaticResource CharcoalSurface}">
+                        Padding="12,10"
+                        BackgroundColor="{StaticResource PureWhite}">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="12" />
+                        <RoundRectangle CornerRadius="14" />
                     </Border.StrokeShape>
-                    <Grid ColumnDefinitions="24,*" ColumnSpacing="14" VerticalOptions="Center">
-                        <Image Grid.Column="0"
-                               Source="{Binding IconImageSource}"
-                               WidthRequest="20"
-                               HeightRequest="20"
-                               VerticalOptions="Center" />
+                    <Grid ColumnDefinitions="34,*" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                BackgroundColor="{StaticResource StatusDanger}"
+                                WidthRequest="32"
+                                HeightRequest="32"
+                                StrokeThickness="0"
+                                VerticalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10" />
+                            </Border.StrokeShape>
+                            <Image Source="{Binding IconImageSource}"
+                                   WidthRequest="18"
+                                   HeightRequest="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
                         <Label Grid.Column="1"
                                Text="{Binding Text}"
                                TextColor="{StaticResource StatusDanger}"
@@ -85,25 +116,16 @@
         </DataTemplate>
     </Shell.MenuItemTemplate>
 
-    <!-- 1. Sales & Analytics Dashboard (Default First Landing Page) -->
-    <FlyoutItem x:Name="SalesAnalyticsDashboardFlyoutItem"
-                Title="Sales &amp; Analytics Dashboard"
-                Icon="dashboard.png"
-                Route="SalesAnalyticsDashboardPage">
-        <ShellContent ContentTemplate="{DataTemplate views:SalesAnalyticsDashboardPage}"
-                      Route="SalesAnalyticsDashboardPage" />
-    </FlyoutItem>
-
-    <!-- 2. Point of Sale Terminal -->
+    <!-- 1. Point of Sale (Default Landing Screen for both Owner & Barista) -->
     <FlyoutItem x:Name="PointOfSaleFlyoutItem"
-                Title="Point of Sale Terminal"
+                Title="Point of Sale"
                 Icon="point_of_sale.png"
                 Route="PointOfSalePage">
         <ShellContent ContentTemplate="{DataTemplate views:PointOfSalePage}"
                       Route="PointOfSalePage" />
     </FlyoutItem>
 
-    <!-- 3. Product Registration & Menu Catalog -->
+    <!-- 2. Product Registration (Owner & permitted roles) -->
     <FlyoutItem x:Name="ProductRegistrationFlyoutItem"
                 Title="Product Registration"
                 Icon="add_box.png"
@@ -112,7 +134,7 @@
                       Route="ProductRegistrationPage" />
     </FlyoutItem>
 
-    <!-- 4. Inventory Management & Stock Ledger -->
+    <!-- 3. Inventory Management (Owner & Barista stock tracking) -->
     <FlyoutItem x:Name="InventoryManagementFlyoutItem"
                 Title="Inventory Management"
                 Icon="inventory_2.png"
@@ -121,26 +143,17 @@
                       Route="InventoryManagementPage" />
     </FlyoutItem>
 
-    <!-- 5. User & Staff Account Management (Owner Only) -->
+    <!-- 4. User & Role Management (Owner Only) -->
     <FlyoutItem x:Name="UserManagementFlyoutItem"
-                Title="Staff &amp; User Accounts"
-                Icon="group.png"
+                Title="User &amp; Role Management"
+                Icon="manage_accounts.png"
                 Route="UserManagementPage">
         <ShellContent ContentTemplate="{DataTemplate views:UserManagementPage}"
                       Route="UserManagementPage" />
     </FlyoutItem>
 
-    <!-- 6. Immutable System Audit Trail -->
-    <FlyoutItem x:Name="AuditTrailFlyoutItem"
-                Title="System Audit Trail"
-                Icon="history_edu.png"
-                Route="AuditTrailPage">
-        <ShellContent ContentTemplate="{DataTemplate views:AuditTrailPage}"
-                      Route="AuditTrailPage" />
-    </FlyoutItem>
-
     <!-- Sign Out Menu Item -->
-    <MenuItem Text="Sign Out of Terminal"
+    <MenuItem Text="Sign Out"
               IconImageSource="logout.png"
               Clicked="OnSignOutClicked" />
 

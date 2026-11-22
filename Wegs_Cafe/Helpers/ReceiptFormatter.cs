@@ -54,6 +54,18 @@ public static class ReceiptFormatter
             var subtotalText = $"PHP {item.LineSubtotal:N2}";
             builder.AppendLine(TwoColumnLine(quantityLine, subtotalText, lineWidth));
 
+            if (!string.IsNullOrWhiteSpace(item.CupSize) &&
+                (!string.Equals(item.CupSize, "Regular", StringComparison.OrdinalIgnoreCase) ||
+                 !string.Equals(item.IceLevel, "Regular Ice", StringComparison.OrdinalIgnoreCase) ||
+                 !string.Equals(item.SweetnessLevel, "100%", StringComparison.OrdinalIgnoreCase) ||
+                 item.AddOns.Count > 0))
+            {
+                var modText = $"  {item.CupSize}, {item.IceLevel}, {item.SweetnessLevel}";
+                if (item.AddOns.Count > 0)
+                    modText += $", {string.Join(", ", item.AddOns)}";
+                builder.AppendLine(TruncateText(modText, lineWidth));
+            }
+
             if (!string.IsNullOrWhiteSpace(item.PreparationNotes))
             {
                 builder.AppendLine(TruncateText($"  Note: {item.PreparationNotes}", lineWidth));

@@ -6,7 +6,7 @@ using Wegs_Cafe.Models;
 namespace Wegs_Cafe.Services;
 
 /// <summary>
-/// Shared in-memory Point of Sale cart service.
+/// Shared in-memory Point of Sale cart service supporting Barista drink modifiers.
 /// </summary>
 public class OrderCartService : ObservableObject
 {
@@ -43,32 +43,67 @@ public class OrderCartService : ObservableObject
         OnPropertyChanged(nameof(HasOrderItems));
     }
 
-    public string? AddProduct(Product product)
+    public string? AddProduct(
+        Product product,
+        string cupSize = "Regular",
+        string iceLevel = "Regular Ice",
+        string sweetnessLevel = "100%",
+        List<string>? addOns = null,
+        decimal modifierSurcharge = 0m,
+        string preparationNotes = "")
     {
         if (!product.IsAvailable)
-            return $"{product.ProductName} is currently unavailable.";
+            return $"{product.ProductName} is currently marked Sold Out / Unavailable.";
 
-        var existingLine = OrderItems.FirstOrDefault(item => item.Product.ProductIdentifier == product.ProductIdentifier);
-        var desiredQuantity = (existingLine?.Quantity ?? 0) + 1;
+        var normalizedAddOns = addOns?.OrderBy(a => a).ToList() ?? new List<string>();
+        var totalUsedForProduct = OrderItems
+            .Where(item => item.Product.ProductIdentifier == product.ProductIdentifier)
+            .Sum(item => item.Quantity);
 
-        if (desiredQuantity > product.StockQuantity)
+        if (totalUsedForProduct + 1 > product.StockQuantity)
         {
             return product.StockQuantity <= 0
                 ? $"{product.ProductName} is out of stock."
                 : $"Only {product.StockQuantity} {product.MeasurementUnit} of {product.ProductName} remaining.";
         }
 
+        var existingLine = OrderItems.FirstOrDefault(item =>
+            item.Product.ProductIdentifier == product.ProductIdentifier &&
+            item.CupSize == cupSize &&
+            item.IceLevel == iceLevel &&
+            item.SweetnessLevel == sweetnessLevel &&
+            item.PreparationNotes == (preparationNotes ?? string.Empty) &&
+            item.AddOns.OrderBy(a => a).SequenceEqual(normalizedAddOns));
+
         if (existingLine == null)
-            OrderItems.Add(new OrderCartItem { Product = product, Quantity = 1 });
+        {
+            OrderItems.Add(new OrderCartItem
+            {
+                Product = product,
+                Quantity = 1,
+                CupSize = cupSize,
+                IceLevel = iceLevel,
+                SweetnessLevel = sweetnessLevel,
+                AddOns = normalizedAddOns,
+                ModifierSurcharge = modifierSurcharge,
+                PreparationNotes = preparationNotes?.Trim() ?? string.Empty
+            });
+        }
         else
-            existingLine.Quantity = desiredQuantity;
+        {
+            existingLine.Quantity++;
+        }
 
         return null;
     }
 
     public string? IncrementItem(OrderCartItem item)
     {
-        if (item.Quantity + 1 > item.Product.StockQuantity)
+        var totalUsedForProduct = OrderItems
+            .Where(line => line.Product.ProductIdentifier == item.Product.ProductIdentifier)
+            .Sum(line => line.Quantity);
+
+        if (totalUsedForProduct + 1 > item.Product.StockQuantity)
             return $"Only {item.Product.StockQuantity} {item.Product.MeasurementUnit} of {item.Product.ProductName} remaining.";
 
         item.Quantity++;

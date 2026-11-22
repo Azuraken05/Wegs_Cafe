@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wegs_Cafe.Models;
@@ -41,16 +42,37 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
     [ObservableProperty]
     private string _paymentReferenceNumber = string.Empty;
 
+    // Inline Validation Errors
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomerOrTableError))]
+    private string _customerOrTableError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAmountTenderedError))]
+    private string _amountTenderedError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReferenceNumberError))]
+    private string _referenceNumberError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCompletePayment))]
+    private bool _isCheckoutValid;
+
     public OrderCartService Cart => _orderCartService;
 
     public bool IsCashSelected => string.Equals(SelectedPaymentMethod, PaymentMethods.Cash, StringComparison.OrdinalIgnoreCase);
     public bool IsGCashSelected => string.Equals(SelectedPaymentMethod, PaymentMethods.GCash, StringComparison.OrdinalIgnoreCase);
     public bool IsCreditCardSelected => string.Equals(SelectedPaymentMethod, PaymentMethods.CreditCard, StringComparison.OrdinalIgnoreCase);
     public bool RequiresReferenceNumber => IsGCashSelected || IsCreditCardSelected;
+    public bool HasCustomerOrTableError => !string.IsNullOrWhiteSpace(CustomerOrTableError);
+    public bool HasAmountTenderedError => !string.IsNullOrWhiteSpace(AmountTenderedError);
+    public bool HasReferenceNumberError => !string.IsNullOrWhiteSpace(ReferenceNumberError);
+    public bool CanCompletePayment => IsCheckoutValid && IsNotBusy;
 
     public string ReferenceFieldTitle => IsGCashSelected
-        ? "GCash Reference Number (Required)"
-        : "Card Terminal Approval Reference Number (Required)";
+        ? "GCash Reference Number (6-20 alphanumeric chars)"
+        : "Card Approval / Trace Reference Number (4-20 alphanumeric chars)";
 
     public decimal SubtotalAmount => _orderCartService.SubtotalAmount;
 
@@ -81,6 +103,28 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
         PageTitle = "Multi-Payment Checkout";
     }
 
+    partial void OnCustomerOrTableLabelChanged(string value) => ValidateCheckoutLive();
+    partial void OnSelectedPaymentMethodChanged(string value) => ValidateCheckoutLive();
+    partial void OnDiscountAmountTextChanged(string value) => ValidateCheckoutLive();
+    partial void OnAmountTenderedTextChanged(string value) => ValidateCheckoutLive();
+    partial void OnPaymentReferenceNumberChanged(string value) => ValidateCheckoutLive();
+
+    private void ValidateCheckoutLive()
+    {
+        var summary = ValidationRules.ValidatePointOfSaleCheckout(
+            _orderCartService.OrderItems.Count,
+            CustomerOrTableLabel,
+            SelectedPaymentMethod,
+            TotalPayableAmount,
+            AmountTenderedText,
+            PaymentReferenceNumber);
+
+        CustomerOrTableError = summary.GetError("CustomerOrTableLabel");
+        AmountTenderedError = summary.GetError("AmountTendered");
+        ReferenceNumberError = summary.GetError("PaymentReferenceNumber");
+        IsCheckoutValid = summary.IsValid;
+    }
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("OrderType", out var orderTypeObj) && orderTypeObj is string typeStr)
@@ -89,10 +133,11 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
         if (query.TryGetValue("CustomerOrTableLabel", out var labelObj) && labelObj is string labelStr)
             CustomerOrTableLabel = labelStr;
 
-        AmountTenderedText = TotalPayableAmount.ToString("0.00");
+        AmountTenderedText = TotalPayableAmount.ToString("0.00", CultureInfo.InvariantCulture);
         OnPropertyChanged(nameof(SubtotalAmount));
         OnPropertyChanged(nameof(TotalPayableAmount));
         OnPropertyChanged(nameof(ChangeDueAmount));
+        ValidateCheckoutLive();
     }
 
     [RelayCommand]
@@ -108,8 +153,10 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
 
         if (IsCashSelected && string.IsNullOrWhiteSpace(AmountTenderedText))
         {
-            AmountTenderedText = TotalPayableAmount.ToString("0.00");
+            AmountTenderedText = TotalPayableAmount.ToString("0.00", CultureInfo.InvariantCulture);
         }
+
+        ValidateCheckoutLive();
     }
 
     [RelayCommand]
@@ -120,13 +167,13 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
 
         if (string.Equals(denominationKey, "Exact", StringComparison.OrdinalIgnoreCase))
         {
-            AmountTenderedText = TotalPayableAmount.ToString("0.00");
+            AmountTenderedText = TotalPayableAmount.ToString("0.00", CultureInfo.InvariantCulture);
             return;
         }
 
         if (decimal.TryParse(denominationKey, out var billAmount))
         {
-            AmountTenderedText = billAmount.ToString("0.00");
+            AmountTenderedText = billAmount.ToString("0.00", CultureInfo.InvariantCulture);
         }
     }
 
@@ -135,15 +182,23 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
     {
         if (IsBusy) return;
         ClearError();
+        ValidateCheckoutLive();
+
+        if (!IsCheckoutValid)
+        {
+            ErrorMessage = "Please fix the highlighted checkout validation errors.";
+            return;
+        }
 
         try
         {
             IsBusy = true;
+            OnPropertyChanged(nameof(CanCompletePayment));
 
             var request = new CheckoutTransactionRequest
             {
                 OrderType = OrderType,
-                CustomerOrTableLabel = CustomerOrTableLabel ?? string.Empty,
+                CustomerOrTableLabel = CustomerOrTableLabel?.Trim() ?? string.Empty,
                 OrderItems = _orderCartService.OrderItems.ToList(),
                 DiscountAmount = DiscountValue,
                 PaymentMethod = SelectedPaymentMethod,
@@ -168,6 +223,7 @@ public partial class PaymentCheckoutViewModel : BaseViewModel, IQueryAttributabl
         finally
         {
             IsBusy = false;
+            OnPropertyChanged(nameof(CanCompletePayment));
         }
     }
 

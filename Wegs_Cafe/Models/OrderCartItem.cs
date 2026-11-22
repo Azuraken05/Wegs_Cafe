@@ -12,7 +12,43 @@ public partial class OrderCartItem : ObservableObject
     private int _quantity = 1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LineSubtotal))]
+    [NotifyPropertyChangedFor(nameof(EffectiveUnitPrice))]
+    [NotifyPropertyChangedFor(nameof(ModifierSummary))]
+    private string _cupSize = "Regular";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModifierSummary))]
+    private string _iceLevel = "Regular Ice";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModifierSummary))]
+    private string _sweetnessLevel = "100%";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModifierSummary))]
+    private List<string> _addOns = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LineSubtotal))]
+    [NotifyPropertyChangedFor(nameof(EffectiveUnitPrice))]
+    private decimal _modifierSurcharge;
+
+    [ObservableProperty]
     private string _preparationNotes = string.Empty;
 
-    public decimal LineSubtotal => Product.SellingPrice * Quantity;
+    public decimal EffectiveUnitPrice => Product.SellingPrice + ModifierSurcharge;
+    public decimal LineSubtotal => EffectiveUnitPrice * Quantity;
+
+    public string ModifierSummary
+    {
+        get
+        {
+            if (!Product.AllowDrinkModifiers) return string.Empty;
+            var parts = new List<string> { CupSize, IceLevel, $"{SweetnessLevel} Sweet" };
+            if (AddOns.Count > 0)
+                parts.AddRange(AddOns);
+            return string.Join(" · ", parts);
+        }
+    }
 }

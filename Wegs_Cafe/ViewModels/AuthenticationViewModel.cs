@@ -88,7 +88,7 @@ public partial class AuthenticationViewModel : BaseViewModel
 
             if (IsPinQuickSwitchMode)
             {
-                await _authenticationService.AuthorizeSecurityPinAsync(SecurityPin);
+                await _authenticationService.SignInWithPinAsync(SecurityPin);
             }
             else
             {

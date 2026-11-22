@@ -27,7 +27,8 @@ public record BluetoothPrinterDevice(string DeviceName, string DeviceAddress);
 
 public interface IAuthenticationService
 {
-    Task<UserAccount> SignInAsync(string username, string password);
+    Task<UserAccount> SignInAsync(string usernameOrEmail, string password);
+    Task<UserAccount> SignInWithPinAsync(string securityPin);
     Task SignOutAsync();
     Task<UserAccount> AuthorizeSecurityPinAsync(string securityPin);
 }
@@ -37,11 +38,11 @@ public interface IUserManagementService
     Task<IReadOnlyList<UserAccount>> GetUserAccountsAsync();
     Task<UserAccount> RegisterStaffAccountAsync(
         string fullName,
-        string username,
         string emailAddress,
         string password,
         string securityPin,
-        string role);
+        string roleName,
+        UserPermissions permissions);
     Task SetAccountActiveStatusAsync(string userIdentifier, bool isActive);
 }
 
@@ -49,13 +50,14 @@ public interface IProductManagementService
 {
     Task<IReadOnlyList<Product>> GetProductsAsync();
     Task<Product> SaveProductAsync(Product product);
+    Task<Product> ToggleProductAvailabilityAsync(string productIdentifier, bool isAvailable);
     Task DeleteProductAsync(string productIdentifier);
 }
 
 public interface IInventoryManagementService
 {
     event EventHandler? InventoryChanged;
-    Task<Product> RecordStockMovementAsync(string productIdentifier, string movementType, int quantityChanged);
+    Task<Product> RecordStockMovementAsync(string productIdentifier, string movementType, int quantityChanged, string remarks = "");
     Task<IReadOnlyList<InventoryLog>> GetInventoryLogsAsync();
 }
 
@@ -63,6 +65,7 @@ public interface IOrderTransactionService
 {
     Task<Order> ProcessCheckoutAsync(CheckoutTransactionRequest request);
     Task<IReadOnlyList<Order>> GetOrdersAsync();
+    Task<Order> UpdateOrderPreparationStatusAsync(string orderIdentifier, string preparationStatus);
     Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin);
 }
 

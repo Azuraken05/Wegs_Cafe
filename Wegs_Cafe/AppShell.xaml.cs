@@ -29,24 +29,22 @@ public partial class AppShell : Shell
 
     private void ApplyRoleBasedNavigationGuards()
     {
-        SalesAnalyticsDashboardFlyoutItem.IsVisible = _sessionService.CanAccessDashboard;
         PointOfSaleFlyoutItem.IsVisible = _sessionService.CanAccessPointOfSale;
-        ProductRegistrationFlyoutItem.IsVisible = _sessionService.CanManageProducts;
-        InventoryManagementFlyoutItem.IsVisible = _sessionService.CanManageInventory;
-        UserManagementFlyoutItem.IsVisible = _sessionService.CanManageUserAccounts;
-        AuditTrailFlyoutItem.IsVisible = _sessionService.CanViewAuditTrail;
+        ProductRegistrationFlyoutItem.IsVisible = _sessionService.CanRegisterProducts;
+        InventoryManagementFlyoutItem.IsVisible = _sessionService.CanViewInventory;
+        UserManagementFlyoutItem.IsVisible = _sessionService.CanAccessUserManagement;
 
-        // Default landing route: SalesAnalyticsDashboardPage for Owner/Manager, PointOfSalePage for Staff
-        CurrentItem = _sessionService.CanAccessDashboard
-            ? SalesAnalyticsDashboardFlyoutItem
-            : PointOfSaleFlyoutItem;
+        // Default landing screen for both Owner and Barista is PointOfSalePage for immediate counter readiness
+        CurrentItem = _sessionService.CanAccessPointOfSale
+            ? PointOfSaleFlyoutItem
+            : InventoryManagementFlyoutItem;
     }
 
     private void BuildSidebarHeader()
     {
         var activeUser = _sessionService.ActiveUser;
         var fullName = activeUser?.FullName ?? "Weg's Cafe Operator";
-        var roleBadge = (activeUser?.Role ?? "staff").ToUpperInvariant();
+        var roleBadge = (activeUser?.RoleName ?? "Barista").ToUpperInvariant();
 
         FlyoutHeader = new VerticalStackLayout
         {
@@ -103,17 +101,11 @@ public partial class AppShell : Shell
                     Margin = new Thickness(0, 6, 0, 0),
                     Content = new Label
                     {
-                        Text = $"ROLE: {roleBadge}",
+                        Text = $"USER LEVEL: {roleBadge}",
                         TextColor = Colors.White,
                         FontSize = 11,
                         FontFamily = "QuicksandBold"
                     }
-                },
-                new BoxView
-                {
-                    HeightRequest = 1,
-                    Color = Color.FromArgb("#2C2C2E"),
-                    Margin = new Thickness(0, 10, 0, 0)
                 }
             }
         };

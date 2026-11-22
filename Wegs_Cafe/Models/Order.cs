@@ -20,6 +20,21 @@ public class OrderItem
     [JsonProperty("line_subtotal")]
     public decimal LineSubtotal { get; set; }
 
+    [JsonProperty("cup_size")]
+    public string CupSize { get; set; } = "Regular";
+
+    [JsonProperty("ice_level")]
+    public string IceLevel { get; set; } = "Regular Ice";
+
+    [JsonProperty("sweetness_level")]
+    public string SweetnessLevel { get; set; } = "100%";
+
+    [JsonProperty("add_ons")]
+    public List<string> AddOns { get; set; } = new();
+
+    [JsonProperty("modifier_surcharge")]
+    public decimal ModifierSurcharge { get; set; }
+
     [JsonProperty("preparation_notes")]
     public string PreparationNotes { get; set; } = string.Empty;
 }
@@ -38,6 +53,9 @@ public class Order
 
     [JsonProperty("customer_or_table_label")]
     public string CustomerOrTableLabel { get; set; } = string.Empty;
+
+    [JsonProperty("preparation_status")]
+    public string PreparationStatus { get; set; } = OrderPreparationStatuses.Preparing;
 
     [JsonProperty("order_items")]
     public List<OrderItem> OrderItems { get; set; } = new();
@@ -66,11 +84,27 @@ public class Order
     [JsonProperty("order_status")]
     public string OrderStatus { get; set; } = OrderStatuses.Completed;
 
-    [JsonProperty("cashier_identifier")]
-    public string CashierIdentifier { get; set; } = string.Empty;
+    [JsonProperty("barista_identifier")]
+    public string BaristaIdentifier { get; set; } = string.Empty;
 
+    [JsonProperty("barista_name")]
+    public string BaristaName { get; set; } = string.Empty;
+
+    /// <summary>Compatibility alias mapped to BaristaIdentifier.</summary>
+    [JsonProperty("cashier_identifier")]
+    public string CashierIdentifier
+    {
+        get => BaristaIdentifier;
+        set => BaristaIdentifier = value;
+    }
+
+    /// <summary>Compatibility alias mapped to BaristaName.</summary>
     [JsonProperty("cashier_name")]
-    public string CashierName { get; set; } = string.Empty;
+    public string CashierName
+    {
+        get => BaristaName;
+        set => BaristaName = value;
+    }
 
     [JsonProperty("created_at")]
     public string CreatedAt { get; set; } = IsoTimestamp.Now();
@@ -86,6 +120,12 @@ public class Order
 
     [JsonIgnore]
     public bool IsNotVoided => !IsVoided;
+
+    [JsonIgnore]
+    public bool IsPreparing => PreparationStatus == OrderPreparationStatuses.Preparing;
+
+    [JsonIgnore]
+    public bool IsReadyForPickup => PreparationStatus == OrderPreparationStatuses.Ready;
 
     [JsonIgnore]
     public string CreatedAtLocalDisplay => IsoTimestamp.ToLocal(CreatedAt)?.ToString("MMM d, yyyy h:mm tt") ?? CreatedAt;

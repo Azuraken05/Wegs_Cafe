@@ -15,9 +15,10 @@ public static class LocalOwnerSeed
     {
         UserIdentifier = "owner-0001",
         Username = OwnerUsername,
-        FullName = "Weg's Cafe Owner",
+        FullName = "Wegs Cafe Owner",
         EmailAddress = "owner@wegscafe.local",
-        Role = UserRoles.Owner,
+        RoleName = UserRoles.Owner,
+        Permissions = UserPermissions.ForOwner(),
         IsActive = true,
         CreatedBy = "system"
     };

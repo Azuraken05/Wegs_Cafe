@@ -34,7 +34,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
     private string _customerOrTableLabel = string.Empty;
 
     [ObservableProperty]
-    private bool _isMobileCartDrawerExpanded;
+    [NotifyPropertyChangedFor(nameof(HasCustomerOrTableError))]
+    private string _customerOrTableError = string.Empty;
 
     [ObservableProperty]
     private bool _isOrderHistoryPanelVisible;
@@ -42,17 +43,78 @@ public partial class PointOfSaleViewModel : BaseViewModel
     [ObservableProperty]
     private string _selectedPrinterStatus = "58mm Thermal Printer Ready";
 
+    // Barista Drink Customization Modal State
+    [ObservableProperty]
+    private bool _isDrinkModifierModalVisible;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomizedUnitPrice))]
+    private Product? _customizingProduct;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRegularSizeSelected))]
+    [NotifyPropertyChangedFor(nameof(IsLargeSizeSelected))]
+    [NotifyPropertyChangedFor(nameof(CustomizedUnitPrice))]
+    private string _selectedCupSize = "Regular";
+
+    [ObservableProperty]
+    private string _selectedIceLevel = "Regular Ice";
+
+    [ObservableProperty]
+    private string _selectedSweetnessLevel = "100%";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomizedUnitPrice))]
+    private bool _hasExtraShotAddOn;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomizedUnitPrice))]
+    private bool _hasOatMilkAddOn;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomizedUnitPrice))]
+    private bool _hasCaramelDrizzleAddOn;
+
+    [ObservableProperty]
+    private string _customDrinkNotes = string.Empty;
+
     public bool IsDineInSelected => string.Equals(OrderType, OrderTypes.DineIn, StringComparison.OrdinalIgnoreCase);
     public bool IsTakeOutSelected => string.Equals(OrderType, OrderTypes.TakeOut, StringComparison.OrdinalIgnoreCase);
+    public bool HasCustomerOrTableError => !string.IsNullOrWhiteSpace(CustomerOrTableError);
+    public bool IsRegularSizeSelected => string.Equals(SelectedCupSize, "Regular", StringComparison.OrdinalIgnoreCase);
+    public bool IsLargeSizeSelected => string.Equals(SelectedCupSize, "Large", StringComparison.OrdinalIgnoreCase);
+    public bool HasActiveQueueOrders => ActiveQueueOrders.Count > 0;
+    public bool CanProceedToCheckout => _orderCartService.HasOrderItems && !HasCustomerOrTableError && (CustomerOrTableLabel?.Trim().Length ?? 0) >= 2;
+
+    public decimal CurrentModifierSurcharge
+    {
+        get
+        {
+            var surcharge = 0m;
+            if (IsLargeSizeSelected) surcharge += 25m;
+            if (HasExtraShotAddOn) surcharge += 30m;
+            if (HasOatMilkAddOn) surcharge += 35m;
+            if (HasCaramelDrizzleAddOn) surcharge += 20m;
+            return surcharge;
+        }
+    }
+
+    public decimal CustomizedUnitPrice => (CustomizingProduct?.SellingPrice ?? 0m) + CurrentModifierSurcharge;
 
     public OrderCartService Cart => _orderCartService;
     public IReadOnlyList<string> Categories { get; } = ProductCategories.AllWithFilter;
+    public IReadOnlyList<string> IceLevelOptions { get; } = new[] { "Regular Ice", "Less Ice", "No Ice" };
+    public IReadOnlyList<string> SweetnessOptions { get; } = new[] { "100%", "75%", "50%", "0%" };
+
     public ObservableCollection<Product> FilteredProducts { get; } = new();
+    public ObservableCollection<Order> ActiveQueueOrders { get; } = new();
     public ObservableCollection<Order> RecentCompletedAndVoidedOrders { get; } = new();
 
-    public string ActiveCashierDisplay => _sessionService.ActiveUser != null
-        ? $"Cashier: {_sessionService.ActiveUser.FullName} ({_sessionService.ActiveUser.Role.ToUpperInvariant()})"
-        : "Cashier: Active";
+    public string ActiveBaristaDisplay => _sessionService.ActiveUser != null
+        ? $"Barista: {_sessionService.ActiveUser.FullName} ({_sessionService.ActiveUser.RoleName})"
+        : "Barista: Active";
+
+    public event EventHandler? DrinkModifierModalRequested;
 
     public PointOfSaleViewModel(
         IProductManagementService productManagementService,
@@ -70,14 +132,22 @@ public partial class PointOfSaleViewModel : BaseViewModel
         _orderCartService = orderCartService;
         _sessionService = sessionService;
         _dialogService = dialogService;
-        PageTitle = "Point of Sale Terminal";
+        PageTitle = "Point of Sale";
 
         _inventoryManagementService.InventoryChanged += async (_, _) => await LoadPointOfSaleDataAsync();
-        _sessionService.ActiveUserChanged += (_, _) => OnPropertyChanged(nameof(ActiveCashierDisplay));
+        _sessionService.ActiveUserChanged += (_, _) => OnPropertyChanged(nameof(ActiveBaristaDisplay));
+        _orderCartService.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CanProceedToCheckout));
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyProductFilters();
     partial void OnSelectedCategoryChanged(string value) => ApplyProductFilters();
+    partial void OnCustomerOrTableLabelChanged(string value)
+    {
+        CustomerOrTableError = (value?.Trim().Length ?? 0) < 2
+            ? "Customer Name or Table Number (min 2 chars) is required."
+            : string.Empty;
+        OnPropertyChanged(nameof(CanProceedToCheckout));
+    }
 
     [RelayCommand]
     public async Task LoadPointOfSaleDataAsync()
@@ -88,15 +158,26 @@ public partial class PointOfSaleViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            OnPropertyChanged(nameof(ActiveCashierDisplay));
+            OnPropertyChanged(nameof(ActiveBaristaDisplay));
             var products = await _productManagementService.GetProductsAsync();
-            _allProducts = products.Where(product => product.IsAvailable).ToList();
+            _allProducts = products.ToList();
             ApplyProductFilters();
 
             var orders = await _orderTransactionService.GetOrdersAsync();
             RecentCompletedAndVoidedOrders.Clear();
+            ActiveQueueOrders.Clear();
+
             foreach (var order in orders.Take(25))
+            {
                 RecentCompletedAndVoidedOrders.Add(order);
+                if (!order.IsVoided &&
+                    (order.PreparationStatus == OrderPreparationStatuses.Preparing ||
+                     order.PreparationStatus == OrderPreparationStatuses.Ready))
+                {
+                    ActiveQueueOrders.Add(order);
+                }
+            }
+            OnPropertyChanged(nameof(HasActiveQueueOrders));
 
             var printers = await _receiptPrinterService.GetPairedPrintersAsync();
             var activePrinter = _receiptPrinterService.SelectedPrinter ?? printers.FirstOrDefault();
@@ -129,14 +210,117 @@ public partial class PointOfSaleViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task AddProductToCartAsync(Product? product)
+    private async Task HandleProductTileTappedAsync(Product? product)
     {
         if (product is null) return;
+
+        if (!product.IsAvailable)
+        {
+            await _dialogService.ShowAlertAsync("Sold Out", $"{product.ProductName} is currently marked Sold Out. Tap 'Available' on the card to re-enable.");
+            return;
+        }
+
+        if (product.StockQuantity <= 0)
+        {
+            await _dialogService.ShowAlertAsync("Out of Stock", $"{product.ProductName} has 0 stock remaining.");
+            return;
+        }
+
+        if (product.AllowDrinkModifiers)
+        {
+            CustomizingProduct = product;
+            SelectedCupSize = "Regular";
+            SelectedIceLevel = product.Category == ProductCategories.HotCoffee ? "No Ice" : "Regular Ice";
+            SelectedSweetnessLevel = "100%";
+            HasExtraShotAddOn = false;
+            HasOatMilkAddOn = false;
+            HasCaramelDrizzleAddOn = false;
+            CustomDrinkNotes = string.Empty;
+            IsDrinkModifierModalVisible = true;
+            DrinkModifierModalRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
 
         var warning = _orderCartService.AddProduct(product);
         if (!string.IsNullOrWhiteSpace(warning))
         {
             await _dialogService.ShowAlertAsync("Stock Limit Reached", warning);
+        }
+    }
+
+    [RelayCommand]
+    private void SelectCupSize(string size)
+    {
+        SelectedCupSize = string.Equals(size, "Large", StringComparison.OrdinalIgnoreCase) ? "Large" : "Regular";
+    }
+
+    [RelayCommand]
+    private void CloseDrinkModifierModal()
+    {
+        IsDrinkModifierModalVisible = false;
+        CustomizingProduct = null;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmCustomizedDrinkAsync()
+    {
+        if (CustomizingProduct is null) return;
+
+        var addOns = new List<string>();
+        if (HasExtraShotAddOn) addOns.Add("Extra Shot");
+        if (HasOatMilkAddOn) addOns.Add("Oat Milk");
+        if (HasCaramelDrizzleAddOn) addOns.Add("Caramel Drizzle");
+
+        var warning = _orderCartService.AddProduct(
+            CustomizingProduct,
+            SelectedCupSize,
+            SelectedIceLevel,
+            SelectedSweetnessLevel,
+            addOns,
+            CurrentModifierSurcharge,
+            CustomDrinkNotes);
+
+        IsDrinkModifierModalVisible = false;
+        CustomizingProduct = null;
+
+        if (!string.IsNullOrWhiteSpace(warning))
+        {
+            await _dialogService.ShowAlertAsync("Stock Limit Reached", warning);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleProductSoldOutAsync(Product? product)
+    {
+        if (product is null) return;
+
+        try
+        {
+            await _productManagementService.ToggleProductAvailabilityAsync(product.ProductIdentifier, !product.IsAvailable);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync("Availability Update Failed", ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task AdvanceOrderPreparationStatusAsync(Order? order)
+    {
+        if (order is null) return;
+
+        var nextStatus = order.PreparationStatus == OrderPreparationStatuses.Preparing
+            ? OrderPreparationStatuses.Ready
+            : OrderPreparationStatuses.Completed;
+
+        try
+        {
+            await _orderTransactionService.UpdateOrderPreparationStatusAsync(order.OrderIdentifier, nextStatus);
+            await LoadPointOfSaleDataAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync("Queue Update Failed", ex.Message);
         }
     }
 
@@ -173,8 +357,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
 
         var notes = await _dialogService.ShowPromptAsync(
             "Preparation Notes",
-            $"Enter preparation notes for {item.Product.ProductName} (e.g., Less sweet, Oat milk, Extra hot):",
-            "Less sweet, extra shot",
+            $"Enter preparation notes for {item.Product.ProductName}:",
+            "Less sweet, extra hot",
             numeric: false,
             initialValue: item.PreparationNotes);
 
@@ -196,12 +380,7 @@ public partial class PointOfSaleViewModel : BaseViewModel
         if (!confirm) return;
         _orderCartService.ClearCart();
         CustomerOrTableLabel = string.Empty;
-    }
-
-    [RelayCommand]
-    private void ToggleMobileCartDrawer()
-    {
-        IsMobileCartDrawerExpanded = !IsMobileCartDrawerExpanded;
+        CustomerOrTableError = string.Empty;
     }
 
     [RelayCommand]
@@ -258,11 +437,16 @@ public partial class PointOfSaleViewModel : BaseViewModel
             return;
         }
 
-        IsMobileCartDrawerExpanded = false;
+        if ((CustomerOrTableLabel?.Trim().Length ?? 0) < 2)
+        {
+            CustomerOrTableError = "Customer Name or Table Number (min 2 chars) is required.";
+            return;
+        }
+
         var parameters = new Dictionary<string, object>
         {
             ["OrderType"] = OrderType,
-            ["CustomerOrTableLabel"] = CustomerOrTableLabel ?? string.Empty
+            ["CustomerOrTableLabel"] = CustomerOrTableLabel?.Trim() ?? string.Empty
         };
 
         await Shell.Current.GoToAsync(nameof(PaymentCheckoutPage), parameters);
@@ -293,8 +477,8 @@ public partial class PointOfSaleViewModel : BaseViewModel
         }
 
         var pin = await _dialogService.ShowPromptAsync(
-            "Manager or Owner Security PIN Required",
-            $"Enter Manager or Owner 4-6 digit Security PIN to void {order.ReceiptNumber} and restore stock:",
+            "Security PIN Required",
+            $"Enter authorized 4-6 digit Security PIN to void {order.ReceiptNumber} and restore stock:",
             "1234",
             numeric: true);
 

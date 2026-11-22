@@ -32,13 +32,13 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     private string _productName = string.Empty;
 
     [ObservableProperty]
-    private string _selectedCategory = ProductCategories.Coffee;
+    private string _selectedCategory = ProductCategories.HotCoffee;
 
     [ObservableProperty]
     private string _sellingPriceText = string.Empty;
 
     [ObservableProperty]
-    private string _costPriceText = string.Empty;
+    private string _costPriceText = "0.00";
 
     [ObservableProperty]
     private string _stockQuantityText = "25";
@@ -50,13 +50,53 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     private string _measurementUnit = "cups";
 
     [ObservableProperty]
+    private bool _allowDrinkModifiers = true;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedImage))]
     private string _imageUrl = string.Empty;
 
     [ObservableProperty]
     private bool _isAvailable = true;
 
+    // Inline Validation Errors
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProductNameError))]
+    private string _productNameError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStockKeepingUnitError))]
+    private string _stockKeepingUnitError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSellingPriceError))]
+    private string _sellingPriceError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCostPriceError))]
+    private string _costPriceError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStockQuantityError))]
+    private string _stockQuantityError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLowStockThresholdError))]
+    private string _lowStockThresholdError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSubmitForm))]
+    private bool _isFormValid;
+
     public bool HasSelectedImage => !string.IsNullOrWhiteSpace(ImageUrl);
+    public bool HasProductNameError => !string.IsNullOrWhiteSpace(ProductNameError);
+    public bool HasStockKeepingUnitError => !string.IsNullOrWhiteSpace(StockKeepingUnitError);
+    public bool HasSellingPriceError => !string.IsNullOrWhiteSpace(SellingPriceError);
+    public bool HasCostPriceError => !string.IsNullOrWhiteSpace(CostPriceError);
+    public bool HasStockQuantityError => !string.IsNullOrWhiteSpace(StockQuantityError);
+    public bool HasLowStockThresholdError => !string.IsNullOrWhiteSpace(LowStockThresholdError);
+    public bool CanSubmitForm => IsFormValid && IsNotBusy;
+
     public string FormSectionTitle => string.IsNullOrWhiteSpace(EditingProductIdentifier)
         ? "Register New Menu Product"
         : "Update Menu Product";
@@ -66,7 +106,6 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
     public IReadOnlyList<string> AvailableCategories { get; } = ProductCategories.All;
     public IReadOnlyList<string> FilterCategories { get; } = ProductCategories.AllWithFilter;
-    public IReadOnlyList<string> CommonMeasurementUnits { get; } = new[] { "cups", "servings", "pcs", "plates", "bottles" };
 
     public ObservableCollection<Product> FilteredProducts { get; } = new();
 
@@ -78,11 +117,49 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         _productManagementService = productManagementService;
         _imageStorageService = imageStorageService;
         _dialogService = dialogService;
-        PageTitle = "Product Registration & Menu Catalog";
+        PageTitle = "Product Registration";
+
+        ValidateFormLive();
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilters();
     partial void OnSelectedFilterCategoryChanged(string value) => ApplyFilters();
+    partial void OnProductNameChanged(string value) => ValidateFormLive();
+    partial void OnStockKeepingUnitChanged(string value) => ValidateFormLive();
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        AllowDrinkModifiers = value is ProductCategories.HotCoffee or ProductCategories.IcedCoffee or ProductCategories.NonCoffee;
+        ValidateFormLive();
+    }
+    partial void OnSellingPriceTextChanged(string value) => ValidateFormLive();
+    partial void OnCostPriceTextChanged(string value) => ValidateFormLive();
+    partial void OnStockQuantityTextChanged(string value) => ValidateFormLive();
+    partial void OnLowStockThresholdTextChanged(string value) => ValidateFormLive();
+
+    private void ValidateFormLive()
+    {
+        var existingSkus = _allProducts
+            .Where(p => p.ProductIdentifier != EditingProductIdentifier)
+            .Select(p => p.StockKeepingUnit);
+
+        var summary = ValidationRules.ValidateProductRegistration(
+            ProductName,
+            StockKeepingUnit,
+            SelectedCategory,
+            SellingPriceText,
+            CostPriceText,
+            StockQuantityText,
+            LowStockThresholdText,
+            existingSkus);
+
+        ProductNameError = summary.GetError("ProductName");
+        StockKeepingUnitError = summary.GetError("StockKeepingUnit");
+        SellingPriceError = summary.GetError("SellingPrice");
+        CostPriceError = summary.GetError("CostPrice");
+        StockQuantityError = summary.GetError("StockQuantity");
+        LowStockThresholdError = summary.GetError("LowStockThreshold");
+        IsFormValid = summary.IsValid;
+    }
 
     [RelayCommand]
     public async Task LoadCatalogAsync()
@@ -98,9 +175,9 @@ public partial class ProductRegistrationViewModel : BaseViewModel
             ApplyFilters();
 
             if (string.IsNullOrWhiteSpace(StockKeepingUnit))
-            {
                 GenerateNextSku();
-            }
+
+            ValidateFormLive();
         }
         catch (Exception ex)
         {
@@ -109,6 +186,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+            OnPropertyChanged(nameof(CanSubmitForm));
         }
     }
 
@@ -133,8 +211,10 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         StockQuantityText = product.StockQuantity.ToString();
         LowStockThresholdText = product.LowStockThreshold.ToString();
         MeasurementUnit = product.MeasurementUnit;
+        AllowDrinkModifiers = product.AllowDrinkModifiers;
         ImageUrl = product.ImageUrl;
         IsAvailable = product.IsAvailable;
+        ValidateFormLive();
     }
 
     [RelayCommand]
@@ -143,15 +223,17 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         ClearError();
         EditingProductIdentifier = string.Empty;
         ProductName = string.Empty;
-        SelectedCategory = ProductCategories.Coffee;
+        SelectedCategory = ProductCategories.HotCoffee;
         SellingPriceText = string.Empty;
-        CostPriceText = string.Empty;
+        CostPriceText = "0.00";
         StockQuantityText = "25";
         LowStockThresholdText = "10";
         MeasurementUnit = "cups";
+        AllowDrinkModifiers = true;
         ImageUrl = string.Empty;
         IsAvailable = true;
         GenerateNextSku();
+        ValidateFormLive();
     }
 
     [RelayCommand]
@@ -161,7 +243,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         {
             var photos = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions
             {
-                Title = "Select Product Photo",
+                Title = "Select Product Photo (.jpg, .png, .webp under 5 MB)",
                 SelectionLimit = 1
             });
 
@@ -209,45 +291,31 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     {
         if (IsBusy) return;
         ClearError();
+        ValidateFormLive();
 
-        if (!decimal.TryParse(SellingPriceText, out var sellingPrice) || sellingPrice <= 0)
+        if (!IsFormValid)
         {
-            ErrorMessage = "Please enter a valid selling price greater than zero.";
-            return;
-        }
-
-        if (!decimal.TryParse(CostPriceText, out var costPrice) || costPrice < 0)
-        {
-            ErrorMessage = "Please enter a valid unit cost price (0 or greater).";
-            return;
-        }
-
-        if (!int.TryParse(StockQuantityText, out var stockQty) || stockQty < 0)
-        {
-            ErrorMessage = "Please enter a valid stock quantity.";
-            return;
-        }
-
-        if (!int.TryParse(LowStockThresholdText, out var lowThreshold) || lowThreshold < 0)
-        {
-            ErrorMessage = "Please enter a valid low-stock threshold.";
+            ErrorMessage = "Please fix the highlighted validation errors before saving.";
             return;
         }
 
         try
         {
             IsBusy = true;
+            OnPropertyChanged(nameof(CanSubmitForm));
+
             var product = new Product
             {
                 ProductIdentifier = EditingProductIdentifier,
-                StockKeepingUnit = StockKeepingUnit.Trim(),
+                StockKeepingUnit = StockKeepingUnit.Trim().ToUpperInvariant(),
                 ProductName = ProductName.Trim(),
                 Category = SelectedCategory,
-                SellingPrice = sellingPrice,
-                CostPrice = costPrice,
-                StockQuantity = stockQty,
-                LowStockThreshold = lowThreshold,
-                MeasurementUnit = string.IsNullOrWhiteSpace(MeasurementUnit) ? "pcs" : MeasurementUnit.Trim(),
+                SellingPrice = decimal.Parse(SellingPriceText),
+                CostPrice = string.IsNullOrWhiteSpace(CostPriceText) ? 0m : decimal.Parse(CostPriceText),
+                StockQuantity = int.Parse(StockQuantityText),
+                LowStockThreshold = int.Parse(LowStockThresholdText),
+                MeasurementUnit = string.IsNullOrWhiteSpace(MeasurementUnit) ? "cups" : MeasurementUnit.Trim(),
+                AllowDrinkModifiers = AllowDrinkModifiers,
                 ImageUrl = ImageUrl,
                 IsAvailable = IsAvailable
             };
@@ -262,7 +330,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
             await _dialogService.ShowAlertAsync(
                 wasNew ? "Product Registered" : "Product Updated",
-                $"{saved.ProductName} ({saved.StockKeepingUnit}) has been saved to the catalog.");
+                $"{saved.ProductName} ({saved.StockKeepingUnit}) has been saved to the menu catalog.");
         }
         catch (Exception ex)
         {
@@ -271,6 +339,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+            OnPropertyChanged(nameof(CanSubmitForm));
         }
     }
 
@@ -335,6 +404,6 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     private void GenerateNextSku()
     {
         var nextIndex = _allProducts.Count + 1;
-        StockKeepingUnit = $"WEGS-{nextIndex:D3}";
+        StockKeepingUnit = $"WEGS-PRD-{nextIndex:D2}";
     }
 }

@@ -41,7 +41,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAuthenticationService>(sp => sp.GetRequiredService<UserAccountStore>());
         builder.Services.AddSingleton<IUserManagementService>(sp => sp.GetRequiredService<UserAccountStore>());
 
-        builder.Services.AddSingleton<IImageStorageService, ImageStorageService>();
+        builder.Services.AddSingleton<IImageStorageService, CloudinaryProductImageStorageService>();
 
         builder.Services.AddSingleton<CatalogAndOrderStore>();
         builder.Services.AddSingleton<IProductManagementService>(sp => sp.GetRequiredService<CatalogAndOrderStore>());

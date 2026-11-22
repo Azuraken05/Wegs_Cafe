@@ -10,6 +10,7 @@ public partial class InventoryManagementViewModel : BaseViewModel
 {
     private readonly IProductManagementService _productManagementService;
     private readonly IInventoryManagementService _inventoryManagementService;
+    private readonly SessionService _sessionService;
     private readonly IDialogService _dialogService;
 
     private List<Product> _allProducts = new();
@@ -32,29 +33,98 @@ public partial class InventoryManagementViewModel : BaseViewModel
     [ObservableProperty]
     private int _outOfStockCount;
 
+    // Stock Adjustment Modal State
     [ObservableProperty]
-    private decimal _totalStockValuation;
+    private bool _isAdjustmentModalVisible;
+
+    [ObservableProperty]
+    private Product? _selectedAdjustmentProduct;
+
+    [ObservableProperty]
+    private string _selectedMovementType = InventoryMovementTypes.StockReplenishment;
+
+    [ObservableProperty]
+    private string _quantityChangeText = "20";
+
+    [ObservableProperty]
+    private string _adjustmentRemarks = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasQuantityChangeError))]
+    private string _quantityChangeError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAdjustmentRemarksError))]
+    private string _adjustmentRemarksError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSubmitAdjustment))]
+    private bool _isAdjustmentValid;
 
     public bool IsAllFilterSelected => string.Equals(SelectedStockFilter, "All", StringComparison.OrdinalIgnoreCase);
     public bool IsLowStockFilterSelected => string.Equals(SelectedStockFilter, "Low Stock", StringComparison.OrdinalIgnoreCase);
     public bool IsOutOfStockFilterSelected => string.Equals(SelectedStockFilter, "Out of Stock", StringComparison.OrdinalIgnoreCase);
+    public bool CanRestockInventory => _sessionService.CanRestockInventory;
+    public bool HasQuantityChangeError => !string.IsNullOrWhiteSpace(QuantityChangeError);
+    public bool HasAdjustmentRemarksError => !string.IsNullOrWhiteSpace(AdjustmentRemarksError);
+    public bool CanSubmitAdjustment => IsAdjustmentValid && IsNotBusy;
 
+    public IReadOnlyList<string> MovementTypeOptions { get; } = InventoryMovementTypes.EditableMovements;
     public ObservableCollection<Product> FilteredProducts { get; } = new();
     public ObservableCollection<InventoryLog> RecentInventoryLogs { get; } = new();
 
     public InventoryManagementViewModel(
         IProductManagementService productManagementService,
         IInventoryManagementService inventoryManagementService,
+        SessionService sessionService,
         IDialogService dialogService)
     {
         _productManagementService = productManagementService;
         _inventoryManagementService = inventoryManagementService;
+        _sessionService = sessionService;
         _dialogService = dialogService;
-        PageTitle = "Inventory Management & Stock Ledger";
+        PageTitle = "Inventory Management";
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilters();
     partial void OnSelectedStockFilterChanged(string value) => ApplyFilters();
+    partial void OnSelectedMovementTypeChanged(string value)
+    {
+        if (value == InventoryMovementTypes.SpoilageOrWaste || value == InventoryMovementTypes.BaristaSpillOrRemake)
+        {
+            if (int.TryParse(QuantityChangeText, out var parsed) && parsed > 0)
+                QuantityChangeText = (-parsed).ToString();
+        }
+        else if (value == InventoryMovementTypes.StockReplenishment)
+        {
+            if (int.TryParse(QuantityChangeText, out var parsed) && parsed < 0)
+                QuantityChangeText = Math.Abs(parsed).ToString();
+        }
+        ValidateAdjustmentLive();
+    }
+    partial void OnQuantityChangeTextChanged(string value) => ValidateAdjustmentLive();
+    partial void OnAdjustmentRemarksChanged(string value) => ValidateAdjustmentLive();
+
+    private void ValidateAdjustmentLive()
+    {
+        if (SelectedAdjustmentProduct is null)
+        {
+            QuantityChangeError = string.Empty;
+            AdjustmentRemarksError = string.Empty;
+            IsAdjustmentValid = false;
+            return;
+        }
+
+        var summary = ValidationRules.ValidateInventoryAdjustment(
+            SelectedAdjustmentProduct.StockQuantity,
+            SelectedMovementType,
+            QuantityChangeText,
+            AdjustmentRemarks);
+
+        QuantityChangeError = summary.GetError("QuantityChanged");
+        AdjustmentRemarksError = summary.GetError("Remarks");
+        IsAdjustmentValid = summary.IsValid;
+    }
 
     [RelayCommand]
     public async Task LoadInventoryAsync()
@@ -65,13 +135,13 @@ public partial class InventoryManagementViewModel : BaseViewModel
         try
         {
             IsBusy = true;
+            OnPropertyChanged(nameof(CanRestockInventory));
             var products = await _productManagementService.GetProductsAsync();
             _allProducts = products.ToList();
 
             TotalProductCount = _allProducts.Count;
             LowStockCount = _allProducts.Count(product => product.IsLowStock);
             OutOfStockCount = _allProducts.Count(product => product.IsOutOfStock);
-            TotalStockValuation = _allProducts.Sum(product => product.CostPrice * product.StockQuantity);
 
             ApplyFilters();
 
@@ -97,91 +167,61 @@ public partial class InventoryManagementViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task ReplenishStockAsync(Product? product)
+    private void OpenAdjustmentModal(Product? product)
     {
         if (product is null) return;
-
-        var input = await _dialogService.ShowPromptAsync(
-            "Stock Replenishment",
-            $"Enter quantity of {product.MeasurementUnit} to add for {product.ProductName} (Current: {product.StockQuantity}):",
-            "20",
-            numeric: true,
-            initialValue: "20");
-
-        if (string.IsNullOrWhiteSpace(input)) return;
-
-        if (!int.TryParse(input.Trim(), out var quantity) || quantity <= 0)
+        if (!CanRestockInventory)
         {
-            await _dialogService.ShowAlertAsync("Invalid Quantity", "Please enter a positive whole number.");
+            _dialogService.ShowAlertAsync("Permission Required", "Your role is view-only for inventory. Contact the Owner or Head Barista to restock or adjust stock.");
             return;
         }
 
-        await ExecuteMovementAsync(product, InventoryMovementTypes.StockReplenishment, quantity);
+        SelectedAdjustmentProduct = product;
+        SelectedMovementType = InventoryMovementTypes.StockReplenishment;
+        QuantityChangeText = "20";
+        AdjustmentRemarks = string.Empty;
+        ValidateAdjustmentLive();
+        IsAdjustmentModalVisible = true;
     }
 
     [RelayCommand]
-    private async Task RecordSpoilageOrWasteAsync(Product? product)
+    private void CloseAdjustmentModal()
     {
-        if (product is null) return;
-
-        var input = await _dialogService.ShowPromptAsync(
-            "Spoilage or Waste Deduction",
-            $"Enter quantity of {product.MeasurementUnit} to deduct for {product.ProductName} (Current: {product.StockQuantity}):",
-            "1",
-            numeric: true,
-            initialValue: "1");
-
-        if (string.IsNullOrWhiteSpace(input)) return;
-
-        if (!int.TryParse(input.Trim(), out var quantity) || quantity <= 0)
-        {
-            await _dialogService.ShowAlertAsync("Invalid Quantity", "Please enter a positive whole number.");
-            return;
-        }
-
-        await ExecuteMovementAsync(product, InventoryMovementTypes.SpoilageOrWaste, quantity);
+        IsAdjustmentModalVisible = false;
+        SelectedAdjustmentProduct = null;
     }
 
     [RelayCommand]
-    private async Task SetManualStockCountAsync(Product? product)
+    private async Task SubmitStockAdjustmentAsync()
     {
-        if (product is null) return;
+        if (SelectedAdjustmentProduct is null || IsBusy) return;
+        ValidateAdjustmentLive();
+        if (!IsAdjustmentValid) return;
 
-        var input = await _dialogService.ShowPromptAsync(
-            "Manual Physical Stock Count",
-            $"Enter exact physical count of {product.MeasurementUnit} for {product.ProductName} (Current: {product.StockQuantity}):",
-            product.StockQuantity.ToString(),
-            numeric: true,
-            initialValue: product.StockQuantity.ToString());
-
-        if (string.IsNullOrWhiteSpace(input)) return;
-
-        if (!int.TryParse(input.Trim(), out var newStockCount) || newStockCount < 0)
-        {
-            await _dialogService.ShowAlertAsync("Invalid Count", "Please enter a non-negative whole number.");
-            return;
-        }
-
-        var delta = newStockCount - product.StockQuantity;
-        if (delta == 0) return;
-
-        await ExecuteMovementAsync(product, InventoryMovementTypes.ManualAdjustment, delta);
-    }
-
-    private async Task ExecuteMovementAsync(Product product, string movementType, int quantityChanged)
-    {
         try
         {
-            await _inventoryManagementService.RecordStockMovementAsync(
-                product.ProductIdentifier,
-                movementType,
-                quantityChanged);
+            IsBusy = true;
+            OnPropertyChanged(nameof(CanSubmitAdjustment));
 
+            var delta = int.Parse(QuantityChangeText);
+            await _inventoryManagementService.RecordStockMovementAsync(
+                SelectedAdjustmentProduct.ProductIdentifier,
+                SelectedMovementType,
+                delta,
+                AdjustmentRemarks.Trim());
+
+            IsAdjustmentModalVisible = false;
+            SelectedAdjustmentProduct = null;
             await LoadInventoryAsync();
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync("Inventory Update Error", ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+            OnPropertyChanged(nameof(CanSubmitAdjustment));
         }
     }
 
@@ -191,13 +231,9 @@ public partial class InventoryManagementViewModel : BaseViewModel
         var filtered = _allProducts.AsEnumerable();
 
         if (IsLowStockFilterSelected)
-        {
             filtered = filtered.Where(item => item.IsLowStock);
-        }
         else if (IsOutOfStockFilterSelected)
-        {
             filtered = filtered.Where(item => item.IsOutOfStock);
-        }
 
         if (!string.IsNullOrWhiteSpace(query))
         {
