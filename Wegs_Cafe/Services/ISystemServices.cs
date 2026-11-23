@@ -59,6 +59,12 @@ public interface IInventoryManagementService
     event EventHandler? InventoryChanged;
     Task<Product> RecordStockMovementAsync(string productIdentifier, string movementType, int quantityChanged, string remarks = "");
     Task<IReadOnlyList<InventoryLog>> GetInventoryLogsAsync();
+
+    // Raw Ingredients Management
+    Task<IReadOnlyList<Ingredient>> GetIngredientsAsync();
+    Task<Ingredient> SaveIngredientAsync(Ingredient ingredient);
+    Task<Ingredient> AdjustIngredientStockAsync(string ingredientIdentifier, decimal quantityDelta, string movementType, string remarks);
+    Task DeleteIngredientAsync(string ingredientIdentifier);
 }
 
 public interface IOrderTransactionService
@@ -66,6 +72,7 @@ public interface IOrderTransactionService
     Task<Order> ProcessCheckoutAsync(CheckoutTransactionRequest request);
     Task<IReadOnlyList<Order>> GetOrdersAsync();
     Task<Order> UpdateOrderPreparationStatusAsync(string orderIdentifier, string preparationStatus);
+    Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin, string voidRemarks);
     Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin);
 }
 

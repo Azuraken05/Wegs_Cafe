@@ -92,6 +92,40 @@ public partial class PointOfSaleViewModel : BaseViewModel
     [ObservableProperty]
     private string _customDrinkNotes = string.Empty;
 
+    // Void Order Modal State
+    [ObservableProperty]
+    private bool _isVoidModalVisible;
+
+    [ObservableProperty]
+    private Order? _orderToVoid;
+
+    [ObservableProperty]
+    private string _voidSecurityPin = string.Empty;
+
+    [ObservableProperty]
+    private string _voidRemarks = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVoidPinError))]
+    private string _voidPinError = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVoidRemarksError))]
+    private string _voidRemarksError = string.Empty;
+
+    [ObservableProperty]
+    private bool _canConfirmVoid;
+
+    public bool HasVoidPinError => !string.IsNullOrWhiteSpace(VoidPinError);
+    public bool HasVoidRemarksError => !string.IsNullOrWhiteSpace(VoidRemarksError);
+    public IReadOnlyList<string> VoidReasonChips { get; } = new[]
+    {
+        "Wrong Order Entry",
+        "Customer Cancelled",
+        "Machine / Prep Issue",
+        "Duplicate Checkout"
+    };
+
     public bool IsDineInSelected => string.Equals(OrderType, OrderTypes.DineIn, StringComparison.OrdinalIgnoreCase);
     public bool IsTakeOutSelected => string.Equals(OrderType, OrderTypes.TakeOut, StringComparison.OrdinalIgnoreCase);
     public bool HasCustomerOrTableError => !string.IsNullOrWhiteSpace(CustomerOrTableError);
@@ -218,6 +252,34 @@ public partial class PointOfSaleViewModel : BaseViewModel
             var (products, recentOrders, activeQueue, printerSummary) = await Task.Run(async () =>
             {
                 var loadedProducts = (await _productManagementService.GetProductsAsync().ConfigureAwait(false)).ToList();
+                var loadedIngredients = (await _inventoryManagementService.GetIngredientsAsync().ConfigureAwait(false)).ToList();
+
+                foreach (var product in loadedProducts)
+                {
+                    if (product.HasRecipe)
+                    {
+                        var minServings = int.MaxValue;
+                        foreach (var recipeItem in product.RecipeIngredients)
+                        {
+                            var raw = loadedIngredients.FirstOrDefault(i => i.IngredientIdentifier == recipeItem.IngredientIdentifier);
+                            if (raw != null && recipeItem.QuantityRequired > 0m)
+                            {
+                                var possible = (int)Math.Floor(raw.CurrentStockQuantity / recipeItem.QuantityRequired);
+                                minServings = Math.Min(minServings, possible);
+                            }
+                            else
+                            {
+                                minServings = 0;
+                            }
+                        }
+                        product.CanMakeServings = minServings == int.MaxValue ? 0 : minServings;
+                    }
+                    else
+                    {
+                        product.CanMakeServings = product.StockQuantity;
+                    }
+                }
+
                 var loadedOrders = (await _orderTransactionService.GetOrdersAsync().ConfigureAwait(false)).Take(25).ToList();
                 var queue = loadedOrders.Where(order =>
                     !order.IsVoided &&
@@ -557,42 +619,82 @@ public partial class PointOfSaleViewModel : BaseViewModel
         await Shell.Current.GoToAsync(nameof(ReceiptPreviewPage), parameters);
     }
 
+    partial void OnVoidSecurityPinChanged(string value) => ValidateVoidModalLive();
+    partial void OnVoidRemarksChanged(string value) => ValidateVoidModalLive();
+
+    private void ValidateVoidModalLive()
+    {
+        var validation = ValidationRules.ValidateVoidOrder(VoidSecurityPin, VoidRemarks);
+        VoidPinError = validation.GetError("SecurityPin");
+        VoidRemarksError = validation.GetError("VoidRemarks");
+        CanConfirmVoid = validation.IsValid;
+    }
+
     [RelayCommand]
-    private async Task VoidOrderTransactionAsync(Order? order)
+    private void SelectVoidReason(string reason)
+    {
+        VoidRemarks = reason;
+        ValidateVoidModalLive();
+    }
+
+    [RelayCommand]
+    private void OpenVoidModal(Order? order)
     {
         if (order is null) return;
-
         if (order.IsVoided)
         {
-            await _dialogService.ShowAlertAsync("Already Voided", $"Order {order.ReceiptNumber} has already been voided.");
+            _dialogService.ShowAlertAsync("Already Voided", $"Order {order.ReceiptNumber} has already been voided.");
             return;
         }
 
-        var pin = await _dialogService.ShowPromptAsync(
-            "Security PIN Required",
-            $"Enter authorized 4-6 digit Security PIN to void {order.ReceiptNumber} and restore stock:",
-            "1234",
-            numeric: true);
+        OrderToVoid = order;
+        VoidSecurityPin = string.Empty;
+        VoidRemarks = string.Empty;
+        VoidPinError = string.Empty;
+        VoidRemarksError = string.Empty;
+        CanConfirmVoid = false;
+        IsVoidModalVisible = true;
+    }
 
-        if (string.IsNullOrWhiteSpace(pin)) return;
+    [RelayCommand]
+    private void CloseVoidModal()
+    {
+        IsVoidModalVisible = false;
+        OrderToVoid = null;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmVoidOrderAsync()
+    {
+        if (OrderToVoid is null || IsBusy) return;
+        ValidateVoidModalLive();
+        if (!CanConfirmVoid) return;
 
         try
         {
             IsBusy = true;
-            var voided = await _orderTransactionService.VoidOrderAsync(order.OrderIdentifier, pin.Trim());
-            await LoadPointOfSaleDataAsync();
+            var voided = await _orderTransactionService.VoidOrderAsync(OrderToVoid.OrderIdentifier, VoidSecurityPin.Trim(), VoidRemarks.Trim());
+            IsVoidModalVisible = false;
+            OrderToVoid = null;
+            await RefreshPointOfSaleDataAsync();
             await _dialogService.ShowAlertAsync(
                 "Order Voided",
-                $"Order {voided.ReceiptNumber} has been marked VOIDED and all item quantities were restored to inventory.");
+                $"Order {voided.ReceiptNumber} has been marked VOIDED and all recipe ingredient quantities were restored to inventory.");
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowAlertAsync("Void Authorization Failed", ex.Message);
+            VoidPinError = ex.Message;
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private void VoidOrderTransaction(Order? order)
+    {
+        OpenVoidModal(order);
     }
 
     private void ApplyProductFilters()

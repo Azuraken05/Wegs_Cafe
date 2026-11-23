@@ -266,14 +266,14 @@
                                            LineBreakMode="TailTruncation"
                                            VerticalOptions="Start" />
 
-                                    <!-- Row 2, Col 0-1: Stock count -->
+                                    <!-- Row 2, Col 0-1: Servings / Stock availability -->
                                     <Label Grid.Row="2"
                                            Grid.Column="0"
                                            Grid.ColumnSpan="2"
-                                           Text="{Binding StockQuantity, StringFormat='Stock: {0}'}"
-                                           FontFamily="InterRegular"
+                                           Text="{Binding ServingsAvailabilityText}"
+                                           FontFamily="InterSemiBold"
                                            FontSize="11"
-                                           TextColor="#52525B"
+                                           TextColor="#16A34A"
                                            VerticalOptions="Center" />
 
                                     <!-- Row 3, Col 0-1: Full unclipped Selling Price -->
@@ -700,6 +700,142 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                         <Button Grid.Column="0" Text="Cancel" Style="{StaticResource OutlineSecondaryButton}" Command="{Binding CloseDrinkModifierModalCommand}" />
                         <Button Grid.Column="1" Text="Add Customized Drink" Style="{StaticResource PrimaryBlackButton}" Command="{Binding ConfirmCustomizedDrinkCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- Mandatory Void Remarks & PIN Authorization Modal Overlay -->
+        <Grid BackgroundColor="#73000000"
+              IsVisible="{Binding IsVoidModalVisible}"
+              Padding="16">
+            <Border Style="{StaticResource CardSurface}"
+                    MaximumWidthRequest="450"
+                    Padding="20"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill"
+                    Shadow="{x:Null}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="AUTHORIZE VOID ORDER"
+                           FontFamily="QuicksandBold"
+                           FontSize="17"
+                           TextColor="{StaticResource StatusDanger}" />
+
+                    <!-- Order Summary Banner -->
+                    <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                            Stroke="{StaticResource BorderGray}"
+                            Padding="12,10"
+                            Shadow="{x:Null}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                        <VerticalStackLayout Spacing="3">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0"
+                                       Text="{Binding OrderToVoid.ReceiptNumber}"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="14"
+                                       TextColor="{StaticResource PrimaryBlack}" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding OrderToVoid.TotalAmount, Converter={StaticResource CurrencyConverter}}"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="14"
+                                       TextColor="{StaticResource PrimaryBlack}" />
+                            </Grid>
+                            <Label Text="{Binding OrderToVoid.ItemsSummary}"
+                                   Style="{StaticResource MutedCaption}"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Text="Voiding will automatically restore recipe raw ingredients back to inventory."
+                                   FontSize="11"
+                                   FontFamily="InterSemiBold"
+                                   TextColor="#16A34A" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- PIN Input -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Manager / Owner PIN (4-6 digits)"
+                               FontFamily="InterSemiBold"
+                               FontSize="12"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding HasVoidPinError}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Entry Text="{Binding VoidSecurityPin}"
+                                   Keyboard="Numeric"
+                                   IsPassword="True"
+                                   Placeholder="Enter 4-6 digit PIN"
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Border>
+                        <Label Text="{Binding VoidPinError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasVoidPinError}" />
+                    </VerticalStackLayout>
+
+                    <!-- Quick-Tap Reason Chips -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Quick-Tap Void Reason"
+                               FontFamily="InterSemiBold"
+                               FontSize="12"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <FlexLayout Wrap="Wrap"
+                                    AlignItems="Center"
+                                    BindableLayout.ItemsSource="{Binding VoidReasonChips}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Button Text="{Binding .}"
+                                            HeightRequest="30"
+                                            Padding="10,0"
+                                            Margin="0,0,6,6"
+                                            FontSize="11"
+                                            FontFamily="InterSemiBold"
+                                            CornerRadius="15"
+                                            BackgroundColor="{StaticResource OffWhiteCream}"
+                                            TextColor="{StaticResource PrimaryBlack}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PointOfSaleViewModel}}, Path=SelectVoidReasonCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+
+                    <!-- Mandatory Void Remarks Entry -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Void Remarks / Explanation (min 5 chars)"
+                               FontFamily="InterSemiBold"
+                               FontSize="12"
+                               TextColor="{StaticResource PrimaryBlack}" />
+                        <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding HasVoidRemarksError}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource StatusDanger}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Entry Text="{Binding VoidRemarks}"
+                                   Placeholder="Explain why this order is being voided"
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                        </Border>
+                        <Label Text="{Binding VoidRemarksError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasVoidRemarksError}" />
+                    </VerticalStackLayout>
+
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,6,0,0">
+                        <Button Grid.Column="0"
+                                Text="Cancel"
+                                Style="{StaticResource OutlineSecondaryButton}"
+                                Command="{Binding CloseVoidModalCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Confirm Void &amp; Restore Stock"
+                                BackgroundColor="{StaticResource StatusDanger}"
+                                TextColor="{StaticResource PureWhite}"
+                                FontFamily="QuicksandBold"
+                                CornerRadius="10"
+                                HeightRequest="44"
+                                IsEnabled="{Binding CanConfirmVoid}"
+                                Command="{Binding ConfirmVoidOrderCommand}" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>

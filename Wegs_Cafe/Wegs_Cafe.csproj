@@ -38,6 +38,12 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<AndroidIncludeDebugSymbols>true</AndroidIncludeDebugSymbols>
+		<RunAOTCompilation>false</RunAOTCompilation>
+		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+		<PublishTrimmed>false</PublishTrimmed>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -46,7 +52,9 @@
 		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 		<PublishTrimmed>false</PublishTrimmed>
 		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
 		<AndroidIncludeDebugSymbols>true</AndroidIncludeDebugSymbols>
+		<AndroidKeyStore>false</AndroidKeyStore>
 	</PropertyGroup>
 
 	<ItemGroup>

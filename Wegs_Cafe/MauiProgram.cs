@@ -64,6 +64,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<SalesAnalyticsDashboardViewModel>();
         builder.Services.AddSingleton<ProductRegistrationViewModel>();
         builder.Services.AddSingleton<InventoryManagementViewModel>();
+        builder.Services.AddSingleton<InventoryLogsViewModel>();
         builder.Services.AddSingleton<UserManagementViewModel>();
         builder.Services.AddSingleton<AuditTrailViewModel>();
         builder.Services.AddSingleton<PointOfSaleViewModel>();
@@ -76,6 +77,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<SalesAnalyticsDashboardPage>();
         builder.Services.AddSingleton<ProductRegistrationPage>();
         builder.Services.AddSingleton<InventoryManagementPage>();
+        builder.Services.AddSingleton<InventoryLogsPage>();
         builder.Services.AddSingleton<UserManagementPage>();
         builder.Services.AddSingleton<AuditTrailPage>();
         builder.Services.AddSingleton<PointOfSalePage>();

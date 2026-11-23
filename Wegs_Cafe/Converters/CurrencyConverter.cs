@@ -87,3 +87,21 @@ public class ImagePathConverter : IValueConverter
         return url;
     }
 }
+
+/// <summary>Converts a list of RecipeIngredientItem into a readable comma-separated summary.</summary>
+public class RecipeSummaryConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is IEnumerable<Wegs_Cafe.Models.RecipeIngredientItem> list)
+        {
+            var items = list.ToList();
+            if (items.Count == 0) return "No raw ingredients attached";
+            return string.Join(", ", items.Select(i => $"{i.IngredientName} ({i.QuantityDisplay})"));
+        }
+        return "No raw ingredients attached";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

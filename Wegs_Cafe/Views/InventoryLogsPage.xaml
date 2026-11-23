@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Wegs_Cafe.ViewModels"
+             xmlns:models="clr-namespace:Wegs_Cafe.Models"
+             x:Class="Wegs_Cafe.Views.InventoryLogsPage"
+             x:DataType="vm:InventoryLogsViewModel"
+             Title="{Binding PageTitle}"
+             BackgroundColor="{StaticResource PureWhite}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Header Strip -->
+        <Border Grid.Row="0"
+                Style="{StaticResource CardSurface}"
+                Padding="16,14"
+                StrokeThickness="0"
+                BackgroundColor="{StaticResource PureWhite}"
+                Shadow="{x:Null}">
+            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="INVENTORY MOVEMENT LOGS"
+                           FontFamily="QuicksandBold"
+                           FontSize="18"
+                           TextColor="{StaticResource PrimaryBlack}" />
+                    <Label Text="{Binding TotalLogCount, StringFormat='{0} total audit-grade records'}"
+                           FontSize="12"
+                           TextColor="{StaticResource MutedText}" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        Text="Refresh"
+                        Style="{StaticResource OutlineSecondaryButton}"
+                        HeightRequest="34"
+                        Padding="12,0"
+                        FontSize="12"
+                        Command="{Binding RefreshLogsCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- Filters & Search Bar -->
+        <VerticalStackLayout Grid.Row="1" Padding="14,0,14,10" Spacing="10">
+            <!-- Filter Chips Horizontal Scroll -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding MovementFilterChips}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Button Text="{Binding .}"
+                                    HeightRequest="34"
+                                    Padding="14,0"
+                                    FontSize="12"
+                                    FontFamily="QuicksandBold"
+                                    CornerRadius="17"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryLogsViewModel}}, Path=SelectFilterCommand}"
+                                    CommandParameter="{Binding .}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Binding="{Binding Source={RelativeSource AncestorType={x:Type vm:InventoryLogsViewModel}}, Path=SelectedMovementFilter}"
+                                                 Value="{Binding .}">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource PrimaryBlack}" />
+                                        <Setter Property="TextColor" Value="{StaticResource PureWhite}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+
+            <!-- Search Bar -->
+            <Border Style="{StaticResource SearchPillBorder}" Padding="10,4" Shadow="{x:Null}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <Border Grid.Column="0"
+                            BackgroundColor="{StaticResource PrimaryBlack}"
+                            WidthRequest="28"
+                            HeightRequest="28"
+                            StrokeThickness="0"
+                            VerticalOptions="Center"
+                            Shadow="{x:Null}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
+                        <Image Source="search.png"
+                               WidthRequest="15"
+                               HeightRequest="15"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+                    <Entry Grid.Column="1"
+                           Text="{Binding SearchQuery}"
+                           Placeholder="Search by item, receipt #, or staff..."
+                           FontSize="13"
+                           BackgroundColor="Transparent"
+                           TextColor="{StaticResource PrimaryBlack}" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- Logs Scroll List -->
+        <ScrollView Grid.Row="2" Padding="14,0,14,14">
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredInventoryLogs}"
+                                 Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:InventoryLog">
+                        <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                                Stroke="{StaticResource BorderGray}"
+                                StrokeThickness="1"
+                                Padding="14,12"
+                                Shadow="{x:Null}">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                            <VerticalStackLayout Spacing="8">
+                                <!-- Top Row: Item Name + Movement Type Badge -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Start">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding ItemDisplayName}"
+                                           FontFamily="QuicksandBold"
+                                           FontSize="15"
+                                           TextColor="{StaticResource PrimaryBlack}"
+                                           LineBreakMode="TailTruncation" />
+
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="#262626"
+                                            Padding="10,3"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Start"
+                                            Shadow="{x:Null}">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="6" /></Border.StrokeShape>
+                                        <Label Text="{Binding MovementType}"
+                                               FontFamily="QuicksandBold"
+                                               FontSize="11"
+                                               TextColor="{StaticResource PureWhite}" />
+                                    </Border>
+                                </Grid>
+
+                                <!-- Middle Row: Quantity Delta & Stock Transition -->
+                                <Border BackgroundColor="{StaticResource PureWhite}"
+                                        Stroke="{StaticResource BorderGray}"
+                                        Padding="10,6"
+                                        Shadow="{x:Null}">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                    <Label Text="{Binding QuantityChangedDisplay}"
+                                           FontFamily="InterSemiBold"
+                                           FontSize="13"
+                                           TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+
+                                <!-- Reference Receipt or Remarks -->
+                                <Label Text="{Binding Remarks, StringFormat='Remarks: {0}'}"
+                                       FontSize="12"
+                                       TextColor="{StaticResource MutedText}"
+                                       IsVisible="{Binding Remarks, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                                <Label Text="{Binding ReferenceReceiptNumber, StringFormat='Ref Receipt: {0}'}"
+                                       FontSize="12"
+                                       FontFamily="InterSemiBold"
+                                       TextColor="{StaticResource PrimaryBlack}"
+                                       IsVisible="{Binding ReferenceReceiptNumber, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                                <!-- Bottom Row: Staff & Recorded Timestamp -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding PerformedByName, StringFormat='Recorded by: {0}'}"
+                                           FontFamily="InterSemiBold"
+                                           FontSize="11"
+                                           TextColor="{StaticResource MutedText}"
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding RecordedAtLocalDisplay}"
+                                           FontSize="11"
+                                           TextColor="{StaticResource MutedText}" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

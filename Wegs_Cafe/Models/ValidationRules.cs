@@ -150,8 +150,72 @@ public static partial class ValidationRules
         return summary;
     }
 
+    public static FormValidationSummary ValidateIngredientRegistration(
+        string? ingredientName,
+        string? stockKeepingUnit,
+        string? category,
+        string? measurementUnit,
+        string? currentStockText,
+        string? lowStockThresholdText,
+        string? unitCostText,
+        IEnumerable<string>? existingSkus = null)
+    {
+        var summary = new FormValidationSummary();
+
+        var trimmedName = ingredientName?.Trim() ?? string.Empty;
+        if (trimmedName.Length < 2 || trimmedName.Length > 60)
+            summary.AddError("IngredientName", "Ingredient Name must be between 2 and 60 characters.");
+
+        var normalizedSku = stockKeepingUnit?.Trim().ToUpperInvariant() ?? string.Empty;
+        if (!SkuRegex().IsMatch(normalizedSku))
+        {
+            summary.AddError("StockKeepingUnit", "SKU must be 3 to 20 uppercase letters, numbers, or hyphens.");
+        }
+        else if (existingSkus != null && existingSkus.Any(existing => string.Equals(existing, normalizedSku, StringComparison.OrdinalIgnoreCase)))
+        {
+            summary.AddError("StockKeepingUnit", "This Stock Keeping Unit (SKU) already exists.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+            summary.AddError("Category", "Ingredient category is required.");
+
+        if (string.IsNullOrWhiteSpace(measurementUnit))
+            summary.AddError("MeasurementUnit", "Base measurement unit (ml, g, pcs) is required.");
+
+        if (!decimal.TryParse(currentStockText?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var currentStock) || currentStock < 0m)
+            summary.AddError("CurrentStockQuantity", "Initial Stock Quantity cannot be negative.");
+
+        if (!decimal.TryParse(lowStockThresholdText?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var threshold) || threshold <= 0m)
+            summary.AddError("LowStockThreshold", "Low-Stock Threshold must be greater than 0.");
+
+        if (!string.IsNullOrWhiteSpace(unitCostText))
+        {
+            if (!decimal.TryParse(unitCostText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var unitCost) || unitCost < 0m)
+                summary.AddError("UnitCost", "Unit Cost must be ₱0.00 or greater.");
+        }
+
+        return summary;
+    }
+
+    public static FormValidationSummary ValidateVoidOrder(
+        string? securityPin,
+        string? voidRemarks)
+    {
+        var summary = new FormValidationSummary();
+
+        var trimmedPin = securityPin?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmedPin) || !PinRegex().IsMatch(trimmedPin))
+            summary.AddError("SecurityPin", "Authorized Manager / Owner PIN (4 to 6 digits) is required.");
+
+        var trimmedRemarks = voidRemarks?.Trim() ?? string.Empty;
+        if (trimmedRemarks.Length < 5)
+            summary.AddError("VoidRemarks", "Void remarks / reason must be at least 5 characters.");
+
+        return summary;
+    }
+
     public static FormValidationSummary ValidateInventoryAdjustment(
-        int currentStockQuantity,
+        decimal currentStockQuantity,
         string? movementType,
         string? quantityChangeText,
         string? remarks)
@@ -161,22 +225,32 @@ public static partial class ValidationRules
         if (string.IsNullOrWhiteSpace(movementType))
             summary.AddError("MovementType", "Movement Type is required.");
 
-        if (!int.TryParse(quantityChangeText, out var quantityChange) || quantityChange == 0)
+        if (!decimal.TryParse(quantityChangeText?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var quantityChange) || quantityChange == 0m)
         {
-            summary.AddError("QuantityChanged", "Quantity Change must be a non-zero whole number.");
+            summary.AddError("QuantityChanged", "Quantity Change must be a non-zero number.");
         }
-        else if (currentStockQuantity + quantityChange < 0)
+        else if (currentStockQuantity + quantityChange < 0m)
         {
-            summary.AddError("QuantityChanged", $"Final stock ({currentStockQuantity + quantityChange}) cannot be less than 0.");
+            summary.AddError("QuantityChanged", $"Final stock ({currentStockQuantity + quantityChange:0.##}) cannot be less than 0.");
         }
 
         var requiresNotes = string.Equals(movementType, InventoryMovementTypes.SpoilageOrWaste, StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(movementType, InventoryMovementTypes.ManualCorrection, StringComparison.OrdinalIgnoreCase);
+                            string.Equals(movementType, InventoryMovementTypes.ManualCorrection, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(movementType, InventoryMovementTypes.BaristaSpillOrRemake, StringComparison.OrdinalIgnoreCase);
 
         if (requiresNotes && (remarks?.Trim().Length ?? 0) < 5)
-            summary.AddError("Remarks", "Reason / Notes (at least 5 characters) are required for Spoilage or Manual Correction.");
+            summary.AddError("Remarks", "Reason / Notes (at least 5 characters) are required.");
 
         return summary;
+    }
+
+    public static FormValidationSummary ValidateInventoryAdjustment(
+        int currentStockQuantity,
+        string? movementType,
+        string? quantityChangeText,
+        string? remarks)
+    {
+        return ValidateInventoryAdjustment((decimal)currentStockQuantity, movementType, quantityChangeText, remarks);
     }
 
     public static FormValidationSummary ValidatePointOfSaleCheckout(

@@ -30,6 +30,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(nameof(PointOfSalePage), typeof(PointOfSalePage));
         Routing.RegisterRoute(nameof(ProductRegistrationPage), typeof(ProductRegistrationPage));
         Routing.RegisterRoute(nameof(InventoryManagementPage), typeof(InventoryManagementPage));
+        Routing.RegisterRoute(nameof(InventoryLogsPage), typeof(InventoryLogsPage));
         Routing.RegisterRoute(nameof(UserManagementPage), typeof(UserManagementPage));
 
         Navigated += OnShellNavigated;

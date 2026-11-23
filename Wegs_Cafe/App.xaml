@@ -18,6 +18,7 @@
             <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
             <converters:StringEmptyConverter x:Key="StringEmptyConverter" />
             <converters:ImagePathConverter x:Key="ImagePathConverter" />
+            <converters:RecipeSummaryConverter x:Key="RecipeSummaryConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

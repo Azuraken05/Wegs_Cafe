@@ -115,6 +115,12 @@ public class Order
     [JsonProperty("voided_by_identifier")]
     public string VoidedByIdentifier { get; set; } = string.Empty;
 
+    [JsonProperty("voided_by_name")]
+    public string VoidedByName { get; set; } = string.Empty;
+
+    [JsonProperty("void_remarks")]
+    public string VoidRemarks { get; set; } = string.Empty;
+
     [JsonIgnore]
     public bool IsVoided => OrderStatus == OrderStatuses.Voided;
 

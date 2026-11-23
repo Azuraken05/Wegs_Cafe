@@ -18,10 +18,12 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
     private readonly SemaphoreSlim _mutex = new(1, 1);
 
     private readonly string _productsFilePath = Path.Combine(FileSystem.AppDataDirectory, "products_v3.json");
+    private readonly string _ingredientsFilePath = Path.Combine(FileSystem.AppDataDirectory, "ingredients_v3.json");
     private readonly string _inventoryLogsFilePath = Path.Combine(FileSystem.AppDataDirectory, "inventory_logs_v3.json");
     private readonly string _ordersFilePath = Path.Combine(FileSystem.AppDataDirectory, "orders_v3.json");
 
     private List<Product>? _cachedProducts;
+    private List<Ingredient>? _cachedIngredients;
     private List<Order>? _cachedOrders;
     private List<InventoryLog>? _cachedInventoryLogs;
 
@@ -322,6 +324,223 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         }
     }
 
+    // ================= RAW INGREDIENTS =================
+
+    public async Task<IReadOnlyList<Ingredient>> GetIngredientsAsync()
+    {
+        RequireAuthenticated();
+        await _mutex.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var list = await EnsureIngredientsSeededAsync().ConfigureAwait(false);
+            return list
+                .OrderBy(ing => ing.Category)
+                .ThenBy(ing => ing.IngredientName)
+                .Select(ing => ing.Clone())
+                .ToList();
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+    }
+
+    public async Task<Ingredient> SaveIngredientAsync(Ingredient inputIngredient)
+    {
+        if (!_sessionService.CanRestockInventory && !_sessionService.CanRegisterProducts)
+            throw new UnauthorizedAccessException("You do not have permission to register or edit ingredients.");
+
+        Ingredient savedIngredient;
+        string? auditAction = null;
+        string? auditDetails = null;
+
+        await _mutex.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var ingredients = await EnsureIngredientsSeededAsync().ConfigureAwait(false);
+            var existing = ingredients.FirstOrDefault(i =>
+                !string.IsNullOrWhiteSpace(inputIngredient.IngredientIdentifier) &&
+                i.IngredientIdentifier == inputIngredient.IngredientIdentifier);
+
+            var existingSkus = ingredients
+                .Where(i => i.IngredientIdentifier != existing?.IngredientIdentifier)
+                .Select(i => i.StockKeepingUnit);
+
+            var validation = ValidationRules.ValidateIngredientRegistration(
+                inputIngredient.IngredientName,
+                inputIngredient.StockKeepingUnit,
+                inputIngredient.Category,
+                inputIngredient.MeasurementUnit,
+                inputIngredient.CurrentStockQuantity.ToString(CultureInfo.InvariantCulture),
+                inputIngredient.LowStockThreshold.ToString(CultureInfo.InvariantCulture),
+                inputIngredient.UnitCost.ToString(CultureInfo.InvariantCulture),
+                existingSkus);
+
+            if (!validation.IsValid)
+                throw new ValidationException(validation.FirstErrorOrEmpty);
+
+            if (existing != null)
+            {
+                existing.IngredientName = inputIngredient.IngredientName.Trim();
+                existing.StockKeepingUnit = inputIngredient.StockKeepingUnit.Trim().ToUpperInvariant();
+                existing.Category = inputIngredient.Category;
+                existing.MeasurementUnit = inputIngredient.MeasurementUnit;
+                existing.CurrentStockQuantity = inputIngredient.CurrentStockQuantity;
+                existing.LowStockThreshold = inputIngredient.LowStockThreshold;
+                existing.UnitCost = inputIngredient.UnitCost;
+                existing.UpdatedAt = IsoTimestamp.Now();
+                savedIngredient = existing.Clone();
+
+                auditAction = AuditActionTypes.UpdateProduct;
+                auditDetails = $"Updated ingredient '{savedIngredient.IngredientName}' ({savedIngredient.StockKeepingUnit}).";
+            }
+            else
+            {
+                var newIngredient = inputIngredient.Clone();
+                if (string.IsNullOrWhiteSpace(newIngredient.IngredientIdentifier))
+                    newIngredient.IngredientIdentifier = $"ing-{Guid.NewGuid():N}";
+                newIngredient.StockKeepingUnit = newIngredient.StockKeepingUnit.Trim().ToUpperInvariant();
+                newIngredient.IngredientName = newIngredient.IngredientName.Trim();
+                newIngredient.UpdatedAt = IsoTimestamp.Now();
+
+                ingredients.Add(newIngredient);
+                savedIngredient = newIngredient.Clone();
+
+                auditAction = AuditActionTypes.CreateProduct;
+                auditDetails = $"Registered new ingredient '{savedIngredient.IngredientName}' ({savedIngredient.StockKeepingUnit}).";
+            }
+
+            await JsonStorageFile.WriteListAsync(_ingredientsFilePath, ingredients).ConfigureAwait(false);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        if (auditAction != null && auditDetails != null)
+        {
+            await _auditTrailService.RecordAuditEntryAsync(
+                auditAction,
+                $"ingredients/{savedIngredient.IngredientIdentifier}",
+                auditDetails);
+        }
+
+        RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Ingredients, savedIngredient.IngredientIdentifier, savedIngredient);
+        return savedIngredient;
+    }
+
+    public async Task<Ingredient> AdjustIngredientStockAsync(
+        string ingredientIdentifier,
+        decimal quantityDelta,
+        string movementType,
+        string remarks)
+    {
+        if (!_sessionService.CanRestockInventory)
+            throw new UnauthorizedAccessException("You do not have permission to restock or adjust inventory.");
+
+        Ingredient updatedIngredient;
+        decimal previousQuantity;
+        decimal newQuantity;
+
+        await _mutex.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var ingredients = await EnsureIngredientsSeededAsync().ConfigureAwait(false);
+            var ingredient = ingredients.FirstOrDefault(i => i.IngredientIdentifier == ingredientIdentifier)
+                             ?? throw new ValidationException("Ingredient was not found.");
+
+            var validation = ValidationRules.ValidateInventoryAdjustment(
+                ingredient.CurrentStockQuantity,
+                movementType,
+                quantityDelta.ToString(CultureInfo.InvariantCulture),
+                remarks);
+
+            if (!validation.IsValid)
+                throw new ValidationException(validation.FirstErrorOrEmpty);
+
+            previousQuantity = ingredient.CurrentStockQuantity;
+            newQuantity = previousQuantity + quantityDelta;
+
+            ingredient.CurrentStockQuantity = newQuantity;
+            ingredient.UpdatedAt = IsoTimestamp.Now();
+            updatedIngredient = ingredient.Clone();
+
+            await JsonStorageFile.WriteListAsync(_ingredientsFilePath, ingredients).ConfigureAwait(false);
+
+            var logs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
+            var log = new InventoryLog
+            {
+                InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
+                IngredientIdentifier = ingredient.IngredientIdentifier,
+                IngredientName = ingredient.IngredientName,
+                MeasurementUnit = ingredient.MeasurementUnit,
+                MovementType = movementType,
+                QuantityChanged = quantityDelta,
+                PreviousStockQuantity = previousQuantity,
+                NewStockQuantity = newQuantity,
+                Remarks = remarks?.Trim() ?? string.Empty,
+                PerformedByIdentifier = _sessionService.CurrentUser?.UserIdentifier ?? "system",
+                PerformedByName = _sessionService.CurrentUser?.FullName ?? "System",
+                RecordedAt = IsoTimestamp.Now()
+            };
+            logs.Add(log);
+            await JsonStorageFile.WriteListAsync(_inventoryLogsFilePath, logs).ConfigureAwait(false);
+            await SyncToFirebaseAsync(DatabaseNodes.InventoryLogs, log.InventoryLogIdentifier, log);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        var auditAction = movementType == InventoryMovementTypes.StockReplenishment
+            ? AuditActionTypes.StockReplenishment
+            : AuditActionTypes.ManualStockAdjustment;
+
+        await _auditTrailService.RecordAuditEntryAsync(
+            auditAction,
+            $"ingredients/{ingredientIdentifier}",
+            $"{movementType}: '{updatedIngredient.IngredientName}' stock changed from {previousQuantity:0.##} to {newQuantity:0.##} ({quantityDelta:+#.##;-#.##;0} {updatedIngredient.MeasurementUnit}).");
+
+        RaiseInventoryChanged();
+        await SyncToFirebaseAsync(DatabaseNodes.Ingredients, updatedIngredient.IngredientIdentifier, updatedIngredient);
+        return updatedIngredient;
+    }
+
+    public async Task DeleteIngredientAsync(string ingredientIdentifier)
+    {
+        if (!_sessionService.CanRegisterProducts)
+            throw new UnauthorizedAccessException("You do not have permission to delete ingredients.");
+
+        string? deletedName = null;
+        await _mutex.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var ingredients = await EnsureIngredientsSeededAsync().ConfigureAwait(false);
+            var existing = ingredients.FirstOrDefault(i => i.IngredientIdentifier == ingredientIdentifier)
+                           ?? throw new ValidationException("Ingredient was not found.");
+
+            deletedName = existing.IngredientName;
+            ingredients.Remove(existing);
+            await JsonStorageFile.WriteListAsync(_ingredientsFilePath, ingredients).ConfigureAwait(false);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        if (deletedName != null)
+        {
+            await _auditTrailService.RecordAuditEntryAsync(
+                AuditActionTypes.DeleteProduct,
+                $"ingredients/{ingredientIdentifier}",
+                $"Deleted ingredient '{deletedName}' ({ingredientIdentifier}).");
+        }
+
+        RaiseInventoryChanged();
+        await DeleteFromFirebaseAsync(DatabaseNodes.Ingredients, ingredientIdentifier);
+    }
+
     // ================= ORDERS & ATOMIC CHECKOUT =================
 
     public async Task<Order> ProcessCheckoutAsync(CheckoutTransactionRequest request)
@@ -428,7 +647,10 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
             orders.Add(completedOrder);
 
+            var ingredients = await EnsureIngredientsSeededAsync().ConfigureAwait(false);
             var inventoryLogs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
+
+            // 1. Finished Product Stock Deductions
             foreach (var (product, quantitySold) in stockDeductions)
             {
                 var previousStock = product.StockQuantity;
@@ -440,19 +662,74 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                     InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
                     ProductIdentifier = product.ProductIdentifier,
                     ProductName = product.ProductName,
-                    MovementType = InventoryMovementTypes.SaleDeduction,
+                    MeasurementUnit = product.MeasurementUnit,
+                    MovementType = InventoryMovementTypes.SaleRecipeDeduction,
                     QuantityChanged = -quantitySold,
                     PreviousStockQuantity = previousStock,
                     NewStockQuantity = product.StockQuantity,
-                    Remarks = $"Order {completedOrder.ReceiptNumber}",
+                    ReferenceReceiptNumber = completedOrder.ReceiptNumber,
+                    Remarks = $"POS Sale Order {completedOrder.ReceiptNumber}",
                     PerformedByIdentifier = _sessionService.CurrentUser!.UserIdentifier,
                     PerformedByName = _sessionService.CurrentUser!.FullName,
                     RecordedAt = IsoTimestamp.Now()
                 });
             }
 
+            // 2. Atomic Recipe Ingredients Deduction
+            var rawDeductions = new Dictionary<string, (Ingredient Ingredient, decimal Quantity)>();
+            foreach (var cartLine in request.OrderItems)
+            {
+                var product = products.FirstOrDefault(p => p.ProductIdentifier == cartLine.Product.ProductIdentifier);
+                if (product?.RecipeIngredients != null)
+                {
+                    foreach (var recipeItem in product.RecipeIngredients)
+                    {
+                        var ing = ingredients.FirstOrDefault(i => i.IngredientIdentifier == recipeItem.IngredientIdentifier);
+                        if (ing != null)
+                        {
+                            var needed = recipeItem.QuantityRequired * cartLine.Quantity;
+                            if (rawDeductions.TryGetValue(ing.IngredientIdentifier, out var existingDeduction))
+                            {
+                                rawDeductions[ing.IngredientIdentifier] = (ing, existingDeduction.Quantity + needed);
+                            }
+                            else
+                            {
+                                rawDeductions[ing.IngredientIdentifier] = (ing, needed);
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var (_, (ing, qtyNeeded)) in rawDeductions)
+            {
+                var prevStock = ing.CurrentStockQuantity;
+                ing.CurrentStockQuantity = Math.Max(0m, prevStock - qtyNeeded);
+                ing.UpdatedAt = IsoTimestamp.Now();
+
+                inventoryLogs.Add(new InventoryLog
+                {
+                    InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
+                    IngredientIdentifier = ing.IngredientIdentifier,
+                    IngredientName = ing.IngredientName,
+                    MeasurementUnit = ing.MeasurementUnit,
+                    MovementType = InventoryMovementTypes.SaleRecipeDeduction,
+                    QuantityChanged = -qtyNeeded,
+                    PreviousStockQuantity = prevStock,
+                    NewStockQuantity = ing.CurrentStockQuantity,
+                    ReferenceReceiptNumber = completedOrder.ReceiptNumber,
+                    Remarks = $"Recipe deduction for Order {completedOrder.ReceiptNumber}",
+                    PerformedByIdentifier = _sessionService.CurrentUser!.UserIdentifier,
+                    PerformedByName = _sessionService.CurrentUser!.FullName,
+                    RecordedAt = IsoTimestamp.Now()
+                });
+
+                await SyncToFirebaseAsync(DatabaseNodes.Ingredients, ing.IngredientIdentifier, ing);
+            }
+
             await JsonStorageFile.WriteListAsync(_ordersFilePath, orders);
             await JsonStorageFile.WriteListAsync(_productsFilePath, products);
+            await JsonStorageFile.WriteListAsync(_ingredientsFilePath, ingredients);
             await JsonStorageFile.WriteListAsync(_inventoryLogsFilePath, inventoryLogs);
 
             totalItemsCount = orderItems.Sum(i => i.Quantity);
@@ -518,9 +795,17 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         return updatedOrder;
     }
 
-    public async Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin)
+    public Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin)
+        => VoidOrderAsync(orderIdentifier, securityPin, "Voided order transaction");
+
+    public async Task<Order> VoidOrderAsync(string orderIdentifier, string securityPin, string voidRemarks)
     {
         RequireAuthenticated();
+
+        var validation = ValidationRules.ValidateVoidOrder(securityPin, voidRemarks);
+        if (!validation.IsValid)
+            throw new ValidationException(validation.FirstErrorOrEmpty);
+
         var authorizer = await _authenticationService.AuthorizeSecurityPinAsync(securityPin);
 
         Order voidedOrder;
@@ -535,8 +820,10 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                 throw new ValidationException("This order has already been voided.");
 
             var products = await EnsureProductsSeededAsync();
+            var ingredients = await EnsureIngredientsSeededAsync();
             var inventoryLogs = _cachedInventoryLogs ??= await JsonStorageFile.ReadListAsync<InventoryLog>(_inventoryLogsFilePath).ConfigureAwait(false);
 
+            // 1. Restore Finished Product Quantities
             foreach (var item in targetOrder.OrderItems)
             {
                 var product = products.FirstOrDefault(p => p.ProductIdentifier == item.ProductIdentifier);
@@ -551,25 +838,65 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
                     InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
                     ProductIdentifier = product.ProductIdentifier,
                     ProductName = product.ProductName,
-                    MovementType = InventoryMovementTypes.ManualCorrection,
+                    MeasurementUnit = product.MeasurementUnit,
+                    MovementType = InventoryMovementTypes.VoidRestoration,
                     QuantityChanged = item.Quantity,
                     PreviousStockQuantity = previousStock,
                     NewStockQuantity = product.StockQuantity,
-                    Remarks = $"Voided Order {targetOrder.ReceiptNumber}",
+                    ReferenceReceiptNumber = targetOrder.ReceiptNumber,
+                    Remarks = $"Voided Order {targetOrder.ReceiptNumber}: {voidRemarks.Trim()}",
                     PerformedByIdentifier = authorizer.UserIdentifier,
                     PerformedByName = authorizer.FullName,
                     RecordedAt = IsoTimestamp.Now()
                 });
+
+                // 2. Restore Raw Ingredients consumed by this order's recipe
+                if (product.RecipeIngredients != null)
+                {
+                    foreach (var recipeItem in product.RecipeIngredients)
+                    {
+                        var ing = ingredients.FirstOrDefault(i => i.IngredientIdentifier == recipeItem.IngredientIdentifier);
+                        if (ing != null)
+                        {
+                            var qtyToRestore = recipeItem.QuantityRequired * item.Quantity;
+                            var prevIngStock = ing.CurrentStockQuantity;
+                            ing.CurrentStockQuantity = prevIngStock + qtyToRestore;
+                            ing.UpdatedAt = IsoTimestamp.Now();
+
+                            inventoryLogs.Add(new InventoryLog
+                            {
+                                InventoryLogIdentifier = Guid.NewGuid().ToString("N"),
+                                IngredientIdentifier = ing.IngredientIdentifier,
+                                IngredientName = ing.IngredientName,
+                                MeasurementUnit = ing.MeasurementUnit,
+                                MovementType = InventoryMovementTypes.VoidRestoration,
+                                QuantityChanged = qtyToRestore,
+                                PreviousStockQuantity = prevIngStock,
+                                NewStockQuantity = ing.CurrentStockQuantity,
+                                ReferenceReceiptNumber = targetOrder.ReceiptNumber,
+                                Remarks = $"Restored from voided order {targetOrder.ReceiptNumber}. Reason: {voidRemarks.Trim()}",
+                                PerformedByIdentifier = authorizer.UserIdentifier,
+                                PerformedByName = authorizer.FullName,
+                                RecordedAt = IsoTimestamp.Now()
+                            });
+
+                            await SyncToFirebaseAsync(DatabaseNodes.Ingredients, ing.IngredientIdentifier, ing);
+                        }
+                    }
+                }
             }
 
             targetOrder.OrderStatus = OrderStatuses.Voided;
             targetOrder.PreparationStatus = OrderStatuses.Voided;
             targetOrder.VoidedAt = IsoTimestamp.Now();
             targetOrder.VoidedByIdentifier = authorizer.UserIdentifier;
+            targetOrder.VoidedByName = authorizer.FullName;
+            targetOrder.VoidRemarks = voidRemarks.Trim();
             voidedOrder = targetOrder;
 
             await JsonStorageFile.WriteListAsync(_ordersFilePath, orders);
             await JsonStorageFile.WriteListAsync(_productsFilePath, products);
+            await JsonStorageFile.WriteListAsync(_ingredientsFilePath, ingredients);
             await JsonStorageFile.WriteListAsync(_inventoryLogsFilePath, inventoryLogs);
         }
         finally
@@ -580,7 +907,7 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         await _auditTrailService.RecordAuditEntryAsync(
             AuditActionTypes.VoidOrder,
             $"orders/{voidedOrder.OrderIdentifier}",
-            $"Voided order {voidedOrder.ReceiptNumber} (₱{voidedOrder.TotalAmount:N2}) and restored stock. Authorized by {authorizer.FullName} ({authorizer.RoleDisplayName}).");
+            $"Voided order {voidedOrder.ReceiptNumber} (₱{voidedOrder.TotalAmount:N2}) and restored recipe stock. Reason: '{voidRemarks.Trim()}'. Authorized by {authorizer.FullName} ({authorizer.RoleDisplayName}).");
 
         RaiseInventoryChanged();
         await SyncToFirebaseAsync(DatabaseNodes.Orders, voidedOrder.OrderIdentifier, voidedOrder);
@@ -677,11 +1004,116 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
 
         var seededProducts = new List<Product>
         {
-            new() { ProductIdentifier = "product-spanish-latte-hot", StockKeepingUnit = "WEGS-HOT-01", ProductName = "Hot Spanish Latte", Category = ProductCategories.HotCoffee, SellingPrice = 140m, CostPrice = 45m, StockQuantity = 42, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
-            new() { ProductIdentifier = "product-americano-hot", StockKeepingUnit = "WEGS-HOT-02", ProductName = "Hot Americano", Category = ProductCategories.HotCoffee, SellingPrice = 105m, CostPrice = 28m, StockQuantity = 38, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
-            new() { ProductIdentifier = "product-iced-spanish-latte", StockKeepingUnit = "WEGS-ICE-01", ProductName = "Iced Spanish Latte", Category = ProductCategories.IcedCoffee, SellingPrice = 150m, CostPrice = 48m, StockQuantity = 35, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
-            new() { ProductIdentifier = "product-iced-caramel-macchiato", StockKeepingUnit = "WEGS-ICE-02", ProductName = "Iced Caramel Macchiato", Category = ProductCategories.IcedCoffee, SellingPrice = 155m, CostPrice = 52m, StockQuantity = 8, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
-            new() { ProductIdentifier = "product-dirty-matcha", StockKeepingUnit = "WEGS-NCF-01", ProductName = "Iced Matcha Latte", Category = ProductCategories.NonCoffee, SellingPrice = 160m, CostPrice = 58m, StockQuantity = 25, LowStockThreshold = 10, MeasurementUnit = "cups", AllowDrinkModifiers = true },
+            new()
+            {
+                ProductIdentifier = "product-spanish-latte-hot",
+                StockKeepingUnit = "WEGS-HOT-01",
+                ProductName = "Hot Spanish Latte",
+                Category = ProductCategories.HotCoffee,
+                SellingPrice = 140m,
+                CostPrice = 37.40m,
+                CalculatedRecipeCost = 37.40m,
+                StockQuantity = 42,
+                LowStockThreshold = 10,
+                MeasurementUnit = "cups",
+                AllowDrinkModifiers = true,
+                RecipeIngredients = new List<RecipeIngredientItem>
+                {
+                    new() { IngredientIdentifier = "ing-fresh-milk", IngredientName = "Fresh Milk", QuantityRequired = 180m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-espresso-beans", IngredientName = "Espresso Beans", QuantityRequired = 18m, MeasurementUnit = "g" },
+                    new() { IngredientIdentifier = "ing-condensed-milk", IngredientName = "Condensed Milk", QuantityRequired = 25m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-16oz-cups", IngredientName = "16oz Plastic Cups", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-cup-lids", IngredientName = "Flat Cup Lids", QuantityRequired = 1m, MeasurementUnit = "pcs" }
+                }
+            },
+            new()
+            {
+                ProductIdentifier = "product-americano-hot",
+                StockKeepingUnit = "WEGS-HOT-02",
+                ProductName = "Hot Americano",
+                Category = ProductCategories.HotCoffee,
+                SellingPrice = 105m,
+                CostPrice = 18.80m,
+                CalculatedRecipeCost = 18.80m,
+                StockQuantity = 38,
+                LowStockThreshold = 10,
+                MeasurementUnit = "cups",
+                AllowDrinkModifiers = true,
+                RecipeIngredients = new List<RecipeIngredientItem>
+                {
+                    new() { IngredientIdentifier = "ing-espresso-beans", IngredientName = "Espresso Beans", QuantityRequired = 18m, MeasurementUnit = "g" },
+                    new() { IngredientIdentifier = "ing-16oz-cups", IngredientName = "16oz Plastic Cups", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-cup-lids", IngredientName = "Flat Cup Lids", QuantityRequired = 1m, MeasurementUnit = "pcs" }
+                }
+            },
+            new()
+            {
+                ProductIdentifier = "product-iced-spanish-latte",
+                StockKeepingUnit = "WEGS-ICE-01",
+                ProductName = "Iced Spanish Latte",
+                Category = ProductCategories.IcedCoffee,
+                SellingPrice = 150m,
+                CostPrice = 38.90m,
+                CalculatedRecipeCost = 38.90m,
+                StockQuantity = 35,
+                LowStockThreshold = 10,
+                MeasurementUnit = "cups",
+                AllowDrinkModifiers = true,
+                RecipeIngredients = new List<RecipeIngredientItem>
+                {
+                    new() { IngredientIdentifier = "ing-fresh-milk", IngredientName = "Fresh Milk", QuantityRequired = 200m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-espresso-beans", IngredientName = "Espresso Beans", QuantityRequired = 18m, MeasurementUnit = "g" },
+                    new() { IngredientIdentifier = "ing-condensed-milk", IngredientName = "Condensed Milk", QuantityRequired = 30m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-16oz-cups", IngredientName = "16oz Plastic Cups", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-cup-lids", IngredientName = "Flat Cup Lids", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-straws", IngredientName = "Eco Paper Straws", QuantityRequired = 1m, MeasurementUnit = "pcs" }
+                }
+            },
+            new()
+            {
+                ProductIdentifier = "product-iced-caramel-macchiato",
+                StockKeepingUnit = "WEGS-ICE-02",
+                ProductName = "Iced Caramel Macchiato",
+                Category = ProductCategories.IcedCoffee,
+                SellingPrice = 155m,
+                CostPrice = 40.70m,
+                CalculatedRecipeCost = 40.70m,
+                StockQuantity = 8,
+                LowStockThreshold = 10,
+                MeasurementUnit = "cups",
+                AllowDrinkModifiers = true,
+                RecipeIngredients = new List<RecipeIngredientItem>
+                {
+                    new() { IngredientIdentifier = "ing-fresh-milk", IngredientName = "Fresh Milk", QuantityRequired = 200m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-espresso-beans", IngredientName = "Espresso Beans", QuantityRequired = 18m, MeasurementUnit = "g" },
+                    new() { IngredientIdentifier = "ing-caramel-sauce", IngredientName = "Caramel Sauce", QuantityRequired = 30m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-16oz-cups", IngredientName = "16oz Plastic Cups", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-cup-lids", IngredientName = "Flat Cup Lids", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-straws", IngredientName = "Eco Paper Straws", QuantityRequired = 1m, MeasurementUnit = "pcs" }
+                }
+            },
+            new()
+            {
+                ProductIdentifier = "product-dirty-matcha",
+                StockKeepingUnit = "WEGS-NCF-01",
+                ProductName = "Iced Matcha Latte",
+                Category = ProductCategories.NonCoffee,
+                SellingPrice = 160m,
+                CostPrice = 44.05m,
+                CalculatedRecipeCost = 44.05m,
+                StockQuantity = 25,
+                LowStockThreshold = 10,
+                MeasurementUnit = "cups",
+                AllowDrinkModifiers = true,
+                RecipeIngredients = new List<RecipeIngredientItem>
+                {
+                    new() { IngredientIdentifier = "ing-matcha-powder", IngredientName = "Matcha Powder", QuantityRequired = 15m, MeasurementUnit = "g" },
+                    new() { IngredientIdentifier = "ing-fresh-milk", IngredientName = "Fresh Milk", QuantityRequired = 180m, MeasurementUnit = "ml" },
+                    new() { IngredientIdentifier = "ing-16oz-cups", IngredientName = "16oz Plastic Cups", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-cup-lids", IngredientName = "Flat Cup Lids", QuantityRequired = 1m, MeasurementUnit = "pcs" },
+                    new() { IngredientIdentifier = "ing-straws", IngredientName = "Eco Paper Straws", QuantityRequired = 1m, MeasurementUnit = "pcs" }
+                }
+            },
             new() { ProductIdentifier = "product-hot-chocolate", StockKeepingUnit = "WEGS-NCF-02", ProductName = "Belgian Hot Chocolate", Category = ProductCategories.NonCoffee, SellingPrice = 135m, CostPrice = 44m, StockQuantity = 20, LowStockThreshold = 8, MeasurementUnit = "cups", AllowDrinkModifiers = true },
             new() { ProductIdentifier = "product-butter-croissant", StockKeepingUnit = "WEGS-PAS-01", ProductName = "Butter Croissant", Category = ProductCategories.Pastries, SellingPrice = 95m, CostPrice = 35m, StockQuantity = 5, LowStockThreshold = 8, MeasurementUnit = "pieces", AllowDrinkModifiers = false },
             new() { ProductIdentifier = "product-basque-cheesecake", StockKeepingUnit = "WEGS-PAS-02", ProductName = "Burnt Basque Cheesecake", Category = ProductCategories.Pastries, SellingPrice = 175m, CostPrice = 65m, StockQuantity = 14, LowStockThreshold = 5, MeasurementUnit = "slices", AllowDrinkModifiers = false },
@@ -747,5 +1179,38 @@ public class CatalogAndOrderStore : IProductManagementService, IInventoryManagem
         await JsonStorageFile.WriteListAsync(_ordersFilePath, seededOrders).ConfigureAwait(false);
         _cachedOrders = seededOrders;
         return _cachedOrders;
+    }
+
+    private async Task<List<Ingredient>> EnsureIngredientsSeededAsync()
+    {
+        if (_cachedIngredients != null) return _cachedIngredients;
+
+        if (File.Exists(_ingredientsFilePath))
+        {
+            var existing = await JsonStorageFile.ReadListAsync<Ingredient>(_ingredientsFilePath).ConfigureAwait(false);
+            if (existing.Count > 0)
+            {
+                _cachedIngredients = existing;
+                return _cachedIngredients;
+            }
+        }
+
+        var seededIngredients = new List<Ingredient>
+        {
+            new() { IngredientIdentifier = "ing-fresh-milk", StockKeepingUnit = "ING-MLK-01", IngredientName = "Fresh Milk", Category = IngredientCategories.DairyAndMilk, MeasurementUnit = MeasurementUnits.Milliliters, CurrentStockQuantity = 5000m, LowStockThreshold = 1000m, UnitCost = 0.08m },
+            new() { IngredientIdentifier = "ing-espresso-beans", StockKeepingUnit = "ING-COF-01", IngredientName = "Espresso Beans", Category = IngredientCategories.CoffeeAndTea, MeasurementUnit = MeasurementUnits.Grams, CurrentStockQuantity = 3000m, LowStockThreshold = 500m, UnitCost = 0.85m },
+            new() { IngredientIdentifier = "ing-condensed-milk", StockKeepingUnit = "ING-MLK-02", IngredientName = "Condensed Milk", Category = IngredientCategories.DairyAndMilk, MeasurementUnit = MeasurementUnits.Milliliters, CurrentStockQuantity = 2000m, LowStockThreshold = 400m, UnitCost = 0.12m },
+            new() { IngredientIdentifier = "ing-brown-sugar-syrup", StockKeepingUnit = "ING-SYR-01", IngredientName = "Brown Sugar Syrup", Category = IngredientCategories.SyrupsAndSauces, MeasurementUnit = MeasurementUnits.Milliliters, CurrentStockQuantity = 2000m, LowStockThreshold = 400m, UnitCost = 0.15m },
+            new() { IngredientIdentifier = "ing-caramel-sauce", StockKeepingUnit = "ING-SYR-02", IngredientName = "Caramel Sauce", Category = IngredientCategories.SyrupsAndSauces, MeasurementUnit = MeasurementUnits.Milliliters, CurrentStockQuantity = 1500m, LowStockThreshold = 300m, UnitCost = 0.18m },
+            new() { IngredientIdentifier = "ing-matcha-powder", StockKeepingUnit = "ING-COF-02", IngredientName = "Matcha Powder", Category = IngredientCategories.CoffeeAndTea, MeasurementUnit = MeasurementUnits.Grams, CurrentStockQuantity = 800m, LowStockThreshold = 200m, UnitCost = 1.20m },
+            new() { IngredientIdentifier = "ing-rock-salt", StockKeepingUnit = "ING-DRY-01", IngredientName = "Rock Salt", Category = IngredientCategories.DryGoodsAndSpices, MeasurementUnit = MeasurementUnits.Grams, CurrentStockQuantity = 1000m, LowStockThreshold = 200m, UnitCost = 0.05m },
+            new() { IngredientIdentifier = "ing-16oz-cups", StockKeepingUnit = "ING-PCK-01", IngredientName = "16oz Plastic Cups", Category = IngredientCategories.PackagingAndCups, MeasurementUnit = MeasurementUnits.Pieces, CurrentStockQuantity = 500m, LowStockThreshold = 100m, UnitCost = 2.50m },
+            new() { IngredientIdentifier = "ing-cup-lids", StockKeepingUnit = "ING-PCK-02", IngredientName = "Flat Cup Lids", Category = IngredientCategories.PackagingAndCups, MeasurementUnit = MeasurementUnits.Pieces, CurrentStockQuantity = 500m, LowStockThreshold = 100m, UnitCost = 1.00m },
+            new() { IngredientIdentifier = "ing-straws", StockKeepingUnit = "ING-PCK-03", IngredientName = "Eco Paper Straws", Category = IngredientCategories.PackagingAndCups, MeasurementUnit = MeasurementUnits.Pieces, CurrentStockQuantity = 500m, LowStockThreshold = 100m, UnitCost = 0.50m }
+        };
+
+        await JsonStorageFile.WriteListAsync(_ingredientsFilePath, seededIngredients).ConfigureAwait(false);
+        _cachedIngredients = seededIngredients;
+        return _cachedIngredients;
     }
 }

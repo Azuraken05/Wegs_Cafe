@@ -30,6 +30,8 @@ public class LocalDatabaseService
             var connection = new SQLiteAsyncConnection(DatabasePath, Flags);
             await connection.CreateTableAsync<LocalUserEntity>().ConfigureAwait(false);
             await connection.CreateTableAsync<LocalProductEntity>().ConfigureAwait(false);
+            await connection.CreateTableAsync<LocalIngredientEntity>().ConfigureAwait(false);
+            await connection.CreateTableAsync<LocalInventoryLogEntity>().ConfigureAwait(false);
             await connection.CreateTableAsync<LocalOrderEntity>().ConfigureAwait(false);
             await connection.CreateTableAsync<PendingSyncOperationEntity>().ConfigureAwait(false);
 

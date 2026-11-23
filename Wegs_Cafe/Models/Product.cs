@@ -31,6 +31,12 @@ public class Product
     [JsonProperty("cost_price")]
     public decimal CostPrice { get; set; }
 
+    [JsonProperty("calculated_recipe_cost")]
+    public decimal CalculatedRecipeCost { get; set; }
+
+    [JsonProperty("recipe_ingredients")]
+    public List<RecipeIngredientItem> RecipeIngredients { get; set; } = new();
+
     [Range(0, int.MaxValue, ErrorMessage = "Initial stock quantity cannot be negative.")]
     [JsonProperty("stock_quantity")]
     public int StockQuantity { get; set; }
@@ -61,10 +67,16 @@ public class Product
     public bool IsLowStock => StockQuantity > 0 && StockQuantity <= LowStockThreshold;
 
     [JsonIgnore]
-    public decimal UnitProfit => SellingPrice - CostPrice;
+    public decimal EffectiveCostPrice => CalculatedRecipeCost > 0m ? CalculatedRecipeCost : CostPrice;
 
     [JsonIgnore]
-    public decimal InventoryValuationAtCost => CostPrice * Math.Max(0, StockQuantity);
+    public decimal UnitProfit => SellingPrice - EffectiveCostPrice;
+
+    [JsonIgnore]
+    public decimal GrossProfitMarginPercent => SellingPrice > 0m ? ((SellingPrice - EffectiveCostPrice) / SellingPrice) * 100m : 0m;
+
+    [JsonIgnore]
+    public decimal InventoryValuationAtCost => EffectiveCostPrice * Math.Max(0, StockQuantity);
 
     [JsonIgnore]
     public decimal InventoryValuationAtRetail => SellingPrice * Math.Max(0, StockQuantity);
@@ -73,13 +85,39 @@ public class Product
     public string StockQuantityDisplay => $"{StockQuantity} {MeasurementUnit}";
 
     [JsonIgnore]
-    public string StockDisplayText => StockQuantityDisplay;
+    public string StockDisplayText => ServingsAvailabilityText;
+
+    [JsonIgnore]
+    public int CanMakeServings { get; set; } = -1;
+
+    [JsonIgnore]
+    public bool HasRecipe => RecipeIngredients != null && RecipeIngredients.Count > 0;
+
+    [JsonIgnore]
+    public string ServingsAvailabilityText
+    {
+        get
+        {
+            if (HasRecipe)
+            {
+                var servings = CanMakeServings >= 0 ? CanMakeServings : StockQuantity;
+                return servings <= 0 ? "Out of Ingredients" : $"Can make: {servings}";
+            }
+            return StockQuantity <= 0 ? "Out of Stock" : $"In Stock: {StockQuantity}";
+        }
+    }
 
     [JsonIgnore]
     public string StockKeepingUnitAndCategory => $"{StockKeepingUnit} · {Category}";
 
     [JsonIgnore]
-    public string StockStatusLabel => !IsAvailable ? "Sold Out" : IsOutOfStock ? "Out of Stock" : IsLowStock ? "Low Stock" : "In Stock";
+    public string StockStatusLabel => !IsAvailable
+        ? "Sold Out"
+        : (HasRecipe && CanMakeServings == 0) || IsOutOfStock
+            ? (HasRecipe ? "Out of Ingredients" : "Out of Stock")
+            : IsLowStock
+                ? "Low Stock"
+                : "In Stock";
 
     [JsonIgnore]
     public string StockStatusText => StockStatusLabel;

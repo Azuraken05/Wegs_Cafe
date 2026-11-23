@@ -343,7 +343,85 @@
                         </Grid>
                     </Border>
 
-                    <!-- 4. User & Role Management Tab -->
+                    <!-- 4. Inventory Logs Tab -->
+                    <Border StrokeThickness="1"
+                            Stroke="Transparent"
+                            BackgroundColor="Transparent"
+                            Padding="12,10"
+                            Shadow="{x:Null}"
+                            IsVisible="{Binding CanViewInventory}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsInventoryLogsActive}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#0A0A0A" />
+                                <Setter Property="Stroke" Value="#0A0A0A" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsInventoryLogsActive}" Value="False">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="Stroke" Value="Transparent" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToRouteCommand}"
+                                                  CommandParameter="InventoryLogsPage" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                            <Border Grid.Column="0"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#EAE7E0"
+                                    VerticalOptions="Center"
+                                    Shadow="{x:Null}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsInventoryLogsActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#262626" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsInventoryLogsActive}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#EAE7E0" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Image Source="history_edu_dark.png"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.Triggers>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsInventoryLogsActive}" Value="True">
+                                            <Setter Property="Source" Value="history_edu.png" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Image" Binding="{Binding IsInventoryLogsActive}" Value="False">
+                                            <Setter Property="Source" Value="history_edu_dark.png" />
+                                        </DataTrigger>
+                                    </Image.Triggers>
+                                </Image>
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="Inventory Logs"
+                                   TextColor="#0A0A0A"
+                                   FontFamily="QuicksandBold"
+                                   FontAttributes="Bold"
+                                   FontSize="14"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsInventoryLogsActive}" Value="True">
+                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsInventoryLogsActive}" Value="False">
+                                        <Setter Property="TextColor" Value="#0A0A0A" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </Border>
+
+                    <!-- 5. User & Role Management Tab -->
                     <Border StrokeThickness="1"
                             Stroke="Transparent"
                             BackgroundColor="Transparent"
@@ -504,6 +582,14 @@
                 FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:InventoryManagementPage}"
                       Route="InventoryManagementPage" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="InventoryLogsFlyoutItem"
+                Title="Inventory Logs"
+                Route="InventoryLogsPage"
+                FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:InventoryLogsPage}"
+                      Route="InventoryLogsPage" />
     </FlyoutItem>
 
     <FlyoutItem x:Name="UserManagementFlyoutItem"

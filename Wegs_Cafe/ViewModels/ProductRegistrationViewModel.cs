@@ -11,10 +11,12 @@ namespace Wegs_Cafe.ViewModels;
 public partial class ProductRegistrationViewModel : BaseViewModel
 {
     private readonly IProductManagementService _productManagementService;
+    private readonly IInventoryManagementService _inventoryManagementService;
     private readonly IImageStorageService _imageStorageService;
     private readonly IDialogService _dialogService;
 
     private List<Product> _allProducts = new();
+    private List<Ingredient> _allRawIngredients = new();
     private CancellationTokenSource? _searchDebounceCts;
     private CancellationTokenSource? _validationDebounceCts;
     private bool _hasLoadedInitialData;
@@ -40,6 +42,10 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     private string _selectedCategory = ProductCategories.HotCoffee;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CalculatedProfitMargin))]
+    [NotifyPropertyChangedFor(nameof(GrossProfitMarginPercent))]
+    [NotifyPropertyChangedFor(nameof(ProfitBadgeText))]
+    [NotifyPropertyChangedFor(nameof(ProfitBadgeColor))]
     private string _sellingPriceText = string.Empty;
 
     [ObservableProperty]
@@ -63,6 +69,24 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
     [ObservableProperty]
     private bool _isAvailable = true;
+
+    // Recipe Ingredient Builder State
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedIngredientUnitLabel))]
+    private Ingredient? _selectedRecipeIngredient;
+
+    [ObservableProperty]
+    private string _recipeQuantityRequiredText = "200";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CalculatedProfitMargin))]
+    [NotifyPropertyChangedFor(nameof(GrossProfitMarginPercent))]
+    [NotifyPropertyChangedFor(nameof(ProfitBadgeText))]
+    [NotifyPropertyChangedFor(nameof(ProfitBadgeColor))]
+    private decimal _calculatedRecipeCost;
+
+    [ObservableProperty]
+    private string _recipeBuilderError = string.Empty;
 
     // Inline Validation Errors
     [ObservableProperty]
@@ -100,11 +124,52 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     public bool HasCostPriceError => !string.IsNullOrWhiteSpace(CostPriceError);
     public bool HasStockQuantityError => !string.IsNullOrWhiteSpace(StockQuantityError);
     public bool HasLowStockThresholdError => !string.IsNullOrWhiteSpace(LowStockThresholdError);
+    public bool HasRecipeBuilderError => !string.IsNullOrWhiteSpace(RecipeBuilderError);
     public bool CanSubmitForm => IsFormValid && IsNotBusy;
+
+    public string SelectedIngredientUnitLabel => SelectedRecipeIngredient?.MeasurementUnit ?? "units";
+
+    public decimal ParsedSellingPrice
+    {
+        get
+        {
+            return decimal.TryParse(SellingPriceText?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var price) && price > 0m
+                ? price
+                : 0m;
+        }
+    }
+
+    public decimal CalculatedProfitMargin => ParsedSellingPrice > 0m ? ParsedSellingPrice - CalculatedRecipeCost : 0m;
+
+    public decimal GrossProfitMarginPercent => ParsedSellingPrice > 0m
+        ? (CalculatedProfitMargin / ParsedSellingPrice) * 100m
+        : 0m;
+
+    public string ProfitBadgeText
+    {
+        get
+        {
+            if (ParsedSellingPrice <= 0m && CalculatedRecipeCost <= 0m)
+                return "Attach ingredients to view recipe food cost & profit margin.";
+            return $"Recipe Cost: ₱{CalculatedRecipeCost:N2} | Gross Profit: ₱{CalculatedProfitMargin:N2} ({GrossProfitMarginPercent:0.#}%)";
+        }
+    }
+
+    public Color ProfitBadgeColor
+    {
+        get
+        {
+            if (ParsedSellingPrice <= 0m) return Color.FromArgb("#52525B");
+            if (GrossProfitMarginPercent >= 60m) return Color.FromArgb("#16A34A"); // Green
+            if (GrossProfitMarginPercent >= 30m) return Color.FromArgb("#D97706"); // Amber
+            return Color.FromArgb("#DC2626"); // Red
+        }
+    }
 
     public string FormSectionTitle => string.IsNullOrWhiteSpace(EditingProductIdentifier)
         ? "Register New Menu Product"
         : "Update Menu Product";
+
     public string SaveButtonLabel => string.IsNullOrWhiteSpace(EditingProductIdentifier)
         ? "Register Product"
         : "Save Product Changes";
@@ -113,13 +178,17 @@ public partial class ProductRegistrationViewModel : BaseViewModel
     public IReadOnlyList<string> FilterCategories { get; } = ProductCategories.AllWithFilter;
 
     public ObservableRangeCollection<Product> FilteredProducts { get; } = new();
+    public ObservableRangeCollection<Ingredient> AvailableRawIngredients { get; } = new();
+    public ObservableCollection<RecipeIngredientItem> CurrentRecipeIngredients { get; } = new();
 
     public ProductRegistrationViewModel(
         IProductManagementService productManagementService,
+        IInventoryManagementService inventoryManagementService,
         IImageStorageService imageStorageService,
         IDialogService dialogService)
     {
         _productManagementService = productManagementService;
+        _inventoryManagementService = inventoryManagementService;
         _imageStorageService = imageStorageService;
         _dialogService = dialogService;
         PageTitle = "Product Registration";
@@ -146,6 +215,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
             }
         }, token);
     }
+
     partial void OnSelectedFilterCategoryChanged(string value) => ApplyFilters();
     partial void OnProductNameChanged(string value) => TriggerDebouncedValidation();
     partial void OnStockKeepingUnitChanged(string value) => TriggerDebouncedValidation();
@@ -154,7 +224,15 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         AllowDrinkModifiers = value is ProductCategories.HotCoffee or ProductCategories.IcedCoffee or ProductCategories.NonCoffee;
         TriggerDebouncedValidation();
     }
-    partial void OnSellingPriceTextChanged(string value) => TriggerDebouncedValidation();
+    partial void OnSellingPriceTextChanged(string value)
+    {
+        TriggerDebouncedValidation();
+        OnPropertyChanged(nameof(ParsedSellingPrice));
+        OnPropertyChanged(nameof(CalculatedProfitMargin));
+        OnPropertyChanged(nameof(GrossProfitMarginPercent));
+        OnPropertyChanged(nameof(ProfitBadgeText));
+        OnPropertyChanged(nameof(ProfitBadgeColor));
+    }
     partial void OnCostPriceTextChanged(string value) => TriggerDebouncedValidation();
     partial void OnStockQuantityTextChanged(string value) => TriggerDebouncedValidation();
     partial void OnLowStockThresholdTextChanged(string value) => TriggerDebouncedValidation();
@@ -226,9 +304,17 @@ public partial class ProductRegistrationViewModel : BaseViewModel
             _allProducts = products.ToList();
             ApplyFilters();
 
+            var rawIngredients = await _inventoryManagementService.GetIngredientsAsync();
+            _allRawIngredients = rawIngredients.ToList();
+            AvailableRawIngredients.ReplaceAll(_allRawIngredients);
+
+            if (SelectedRecipeIngredient == null && AvailableRawIngredients.Count > 0)
+                SelectedRecipeIngredient = AvailableRawIngredients[0];
+
             if (string.IsNullOrWhiteSpace(StockKeepingUnit))
                 GenerateNextSku();
 
+            RecalculateRecipeFoodCost();
             ValidateFormLive();
         }
         catch (Exception ex)
@@ -240,6 +326,76 @@ public partial class ProductRegistrationViewModel : BaseViewModel
             IsBusy = false;
             OnPropertyChanged(nameof(CanSubmitForm));
         }
+    }
+
+    [RelayCommand]
+    private void AddRecipeIngredient()
+    {
+        if (SelectedRecipeIngredient == null)
+        {
+            RecipeBuilderError = "Please select a raw ingredient.";
+            return;
+        }
+
+        if (!decimal.TryParse(RecipeQuantityRequiredText?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var quantity) || quantity <= 0m)
+        {
+            RecipeBuilderError = "Enter a valid quantity greater than 0.";
+            return;
+        }
+
+        RecipeBuilderError = string.Empty;
+
+        var existingItem = CurrentRecipeIngredients.FirstOrDefault(i => i.IngredientIdentifier == SelectedRecipeIngredient.IngredientIdentifier);
+        if (existingItem != null)
+        {
+            existingItem.QuantityRequired = quantity;
+            existingItem.MeasurementUnit = SelectedRecipeIngredient.MeasurementUnit;
+            // Force collection notification
+            var index = CurrentRecipeIngredients.IndexOf(existingItem);
+            CurrentRecipeIngredients[index] = existingItem.Clone();
+        }
+        else
+        {
+            CurrentRecipeIngredients.Add(new RecipeIngredientItem
+            {
+                IngredientIdentifier = SelectedRecipeIngredient.IngredientIdentifier,
+                IngredientName = SelectedRecipeIngredient.IngredientName,
+                MeasurementUnit = SelectedRecipeIngredient.MeasurementUnit,
+                QuantityRequired = quantity
+            });
+        }
+
+        RecalculateRecipeFoodCost();
+    }
+
+    [RelayCommand]
+    private void RemoveRecipeIngredient(RecipeIngredientItem? item)
+    {
+        if (item == null) return;
+        CurrentRecipeIngredients.Remove(item);
+        RecalculateRecipeFoodCost();
+    }
+
+    private void RecalculateRecipeFoodCost()
+    {
+        decimal totalCost = 0m;
+        foreach (var recipeItem in CurrentRecipeIngredients)
+        {
+            var raw = _allRawIngredients.FirstOrDefault(r => r.IngredientIdentifier == recipeItem.IngredientIdentifier);
+            var unitCost = raw?.UnitCost ?? 0m;
+            totalCost += unitCost * recipeItem.QuantityRequired;
+        }
+
+        CalculatedRecipeCost = totalCost;
+        if (totalCost > 0m)
+        {
+            CostPriceText = totalCost.ToString("0.00", CultureInfo.InvariantCulture);
+        }
+
+        OnPropertyChanged(nameof(CalculatedProfitMargin));
+        OnPropertyChanged(nameof(GrossProfitMarginPercent));
+        OnPropertyChanged(nameof(ProfitBadgeText));
+        OnPropertyChanged(nameof(ProfitBadgeColor));
     }
 
     [RelayCommand]
@@ -266,6 +422,17 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         AllowDrinkModifiers = product.AllowDrinkModifiers;
         ImageUrl = product.ImageUrl;
         IsAvailable = product.IsAvailable;
+
+        CurrentRecipeIngredients.Clear();
+        if (product.RecipeIngredients != null)
+        {
+            foreach (var ing in product.RecipeIngredients)
+            {
+                CurrentRecipeIngredients.Add(ing.Clone());
+            }
+        }
+
+        RecalculateRecipeFoodCost();
         ValidateFormLive();
     }
 
@@ -284,6 +451,9 @@ public partial class ProductRegistrationViewModel : BaseViewModel
         AllowDrinkModifiers = true;
         ImageUrl = string.Empty;
         IsAvailable = true;
+        CurrentRecipeIngredients.Clear();
+        CalculatedRecipeCost = 0m;
+        RecipeBuilderError = string.Empty;
         GenerateNextSku();
         ValidateFormLive();
     }
@@ -356,6 +526,10 @@ public partial class ProductRegistrationViewModel : BaseViewModel
             IsBusy = true;
             OnPropertyChanged(nameof(CanSubmitForm));
 
+            var effectiveCost = CalculatedRecipeCost > 0m
+                ? CalculatedRecipeCost
+                : (string.IsNullOrWhiteSpace(CostPriceText) ? 0m : decimal.Parse(CostPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture));
+
             var product = new Product
             {
                 ProductIdentifier = EditingProductIdentifier,
@@ -363,13 +537,15 @@ public partial class ProductRegistrationViewModel : BaseViewModel
                 ProductName = ProductName.Trim(),
                 Category = SelectedCategory,
                 SellingPrice = decimal.Parse(SellingPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture),
-                CostPrice = string.IsNullOrWhiteSpace(CostPriceText) ? 0m : decimal.Parse(CostPriceText.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture),
+                CostPrice = effectiveCost,
+                CalculatedRecipeCost = CalculatedRecipeCost,
                 StockQuantity = int.Parse(StockQuantityText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture),
                 LowStockThreshold = int.Parse(LowStockThresholdText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture),
                 MeasurementUnit = string.IsNullOrWhiteSpace(MeasurementUnit) ? "cups" : MeasurementUnit.Trim(),
                 AllowDrinkModifiers = AllowDrinkModifiers,
                 ImageUrl = ImageUrl,
-                IsAvailable = IsAvailable
+                IsAvailable = IsAvailable,
+                RecipeIngredients = CurrentRecipeIngredients.ToList()
             };
 
             var saved = await _productManagementService.SaveProductAsync(product);
@@ -382,7 +558,7 @@ public partial class ProductRegistrationViewModel : BaseViewModel
 
             await _dialogService.ShowAlertAsync(
                 wasNew ? "Product Registered" : "Product Updated",
-                $"{saved.ProductName} ({saved.StockKeepingUnit}) has been saved to the menu catalog.");
+                $"{saved.ProductName} ({saved.StockKeepingUnit}) with recipe has been saved.");
         }
         catch (Exception ex)
         {

@@ -22,6 +22,7 @@ public partial class AppShellViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsPointOfSaleActive));
                 OnPropertyChanged(nameof(IsProductRegistrationActive));
                 OnPropertyChanged(nameof(IsInventoryManagementActive));
+                OnPropertyChanged(nameof(IsInventoryLogsActive));
                 OnPropertyChanged(nameof(IsUserManagementActive));
             }
         }
@@ -30,6 +31,7 @@ public partial class AppShellViewModel : ObservableObject
     public bool IsPointOfSaleActive => string.Equals(ActiveRoute, nameof(PointOfSalePage), StringComparison.OrdinalIgnoreCase);
     public bool IsProductRegistrationActive => string.Equals(ActiveRoute, nameof(ProductRegistrationPage), StringComparison.OrdinalIgnoreCase);
     public bool IsInventoryManagementActive => string.Equals(ActiveRoute, nameof(InventoryManagementPage), StringComparison.OrdinalIgnoreCase);
+    public bool IsInventoryLogsActive => string.Equals(ActiveRoute, nameof(InventoryLogsPage), StringComparison.OrdinalIgnoreCase);
     public bool IsUserManagementActive => string.Equals(ActiveRoute, nameof(UserManagementPage), StringComparison.OrdinalIgnoreCase);
 
     public bool CanAccessPointOfSale => _sessionService.CanAccessPointOfSale;

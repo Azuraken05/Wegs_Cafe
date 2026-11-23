@@ -32,6 +32,8 @@ public class LocalProductEntity
     public string Category { get; set; } = ProductCategories.HotCoffee;
     public decimal SellingPrice { get; set; }
     public decimal CostPrice { get; set; }
+    public decimal CalculatedRecipeCost { get; set; }
+    public string RecipeIngredientsJson { get; set; } = "[]";
     public int StockQuantity { get; set; }
     public int LowStockThreshold { get; set; } = 10;
     public string MeasurementUnit { get; set; } = "cups";
@@ -40,6 +42,48 @@ public class LocalProductEntity
     public string LocalCachedImagePath { get; set; } = string.Empty;
     public bool IsAvailable { get; set; } = true;
     public string UpdatedAt { get; set; } = IsoTimestamp.Now();
+    public bool IsSynced { get; set; }
+}
+
+[Table("local_ingredients")]
+public class LocalIngredientEntity
+{
+    [PrimaryKey]
+    public string IngredientIdentifier { get; set; } = string.Empty;
+    [Indexed]
+    public string StockKeepingUnit { get; set; } = string.Empty;
+    public string IngredientName { get; set; } = string.Empty;
+    [Indexed]
+    public string Category { get; set; } = IngredientCategories.DairyAndMilk;
+    public string MeasurementUnit { get; set; } = MeasurementUnits.Milliliters;
+    public decimal CurrentStockQuantity { get; set; }
+    public decimal LowStockThreshold { get; set; } = 100m;
+    public decimal UnitCost { get; set; }
+    public string UpdatedAt { get; set; } = IsoTimestamp.Now();
+    public bool IsSynced { get; set; }
+}
+
+[Table("local_inventory_logs")]
+public class LocalInventoryLogEntity
+{
+    [PrimaryKey]
+    public string InventoryLogIdentifier { get; set; } = string.Empty;
+    [Indexed]
+    public string IngredientIdentifier { get; set; } = string.Empty;
+    public string IngredientName { get; set; } = string.Empty;
+    public string ProductIdentifier { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string MovementType { get; set; } = InventoryMovementTypes.ManualCorrection;
+    public decimal QuantityChanged { get; set; }
+    public decimal PreviousStockQuantity { get; set; }
+    public decimal NewStockQuantity { get; set; }
+    public string MeasurementUnit { get; set; } = string.Empty;
+    public string ReferenceReceiptNumber { get; set; } = string.Empty;
+    public string Remarks { get; set; } = string.Empty;
+    public string PerformedByIdentifier { get; set; } = string.Empty;
+    public string PerformedByName { get; set; } = string.Empty;
+    [Indexed]
+    public string RecordedAt { get; set; } = IsoTimestamp.Now();
     public bool IsSynced { get; set; }
 }
 
@@ -66,6 +110,8 @@ public class LocalOrderEntity
     public string CreatedAt { get; set; } = IsoTimestamp.Now();
     public string VoidedAt { get; set; } = string.Empty;
     public string VoidedByIdentifier { get; set; } = string.Empty;
+    public string VoidedByName { get; set; } = string.Empty;
+    public string VoidRemarks { get; set; } = string.Empty;
     public bool IsParked { get; set; }
     public bool IsSynced { get; set; }
 }

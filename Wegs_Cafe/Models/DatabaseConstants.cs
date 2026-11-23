@@ -8,6 +8,7 @@ public static class DatabaseNodes
 {
     public const string Users = "users";
     public const string Products = "products";
+    public const string Ingredients = "ingredients";
     public const string Orders = "orders";
     public const string InventoryLogs = "inventory_logs";
     public const string AuditLogs = "audit_logs";
@@ -46,6 +47,34 @@ public static class ProductCategories
     };
 }
 
+public static class IngredientCategories
+{
+    public const string DairyAndMilk = "Dairy & Milk";
+    public const string CoffeeAndTea = "Coffee & Tea";
+    public const string SyrupsAndSauces = "Syrups & Sauces";
+    public const string DryGoodsAndSpices = "Dry Goods & Spices";
+    public const string PackagingAndCups = "Packaging & Cups";
+
+    public static readonly string[] All =
+    {
+        DairyAndMilk, CoffeeAndTea, SyrupsAndSauces, DryGoodsAndSpices, PackagingAndCups
+    };
+
+    public static readonly string[] AllWithFilter =
+    {
+        "All", DairyAndMilk, CoffeeAndTea, SyrupsAndSauces, DryGoodsAndSpices, PackagingAndCups
+    };
+}
+
+public static class MeasurementUnits
+{
+    public const string Milliliters = "ml";
+    public const string Grams = "g";
+    public const string Pieces = "pcs";
+
+    public static readonly string[] All = { Milliliters, Grams, Pieces };
+}
+
 public static class OrderTypes
 {
     public const string DineIn = "Dine-In";
@@ -74,18 +103,30 @@ public static class OrderStatuses
 
 public static class InventoryMovementTypes
 {
-    public const string SaleDeduction = "Sale Deduction";
+    public const string SaleRecipeDeduction = "Sale Recipe Deduction";
     public const string StockReplenishment = "Stock Replenishment";
     public const string SpoilageOrWaste = "Spoilage or Waste";
+    public const string VoidRestoration = "Void Restoration";
     public const string BaristaSpillOrRemake = "Barista Spill or Remake";
     public const string ManualCorrection = "Manual Correction";
     public const string ManualAdjustment = ManualCorrection;
+    public const string SaleDeduction = SaleRecipeDeduction;
 
     public static readonly string[] EditableMovements =
     {
         StockReplenishment,
         SpoilageOrWaste,
         BaristaSpillOrRemake,
+        ManualCorrection
+    };
+
+    public static readonly string[] AllMovementFilters =
+    {
+        "All Movements",
+        SaleRecipeDeduction,
+        StockReplenishment,
+        SpoilageOrWaste,
+        VoidRestoration,
         ManualCorrection
     };
 }

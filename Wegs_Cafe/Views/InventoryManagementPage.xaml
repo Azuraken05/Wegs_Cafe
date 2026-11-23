@@ -20,12 +20,12 @@
                             Padding="12,10"
                             Shadow="{x:Null}">
                         <VerticalStackLayout Spacing="2">
-                            <Label Text="MENU ITEMS"
+                            <Label Text="RAW INGREDIENTS"
                                    FontFamily="InterSemiBold"
                                    FontSize="10"
                                    TextColor="{StaticResource MutedText}"
                                    LineBreakMode="TailTruncation" />
-                            <Label Text="{Binding TotalProductCount}"
+                            <Label Text="{Binding TotalIngredientCount}"
                                    FontFamily="QuicksandBold"
                                    FontSize="24"
                                    TextColor="{StaticResource PrimaryBlack}" />
@@ -50,7 +50,7 @@
                                    FontFamily="QuicksandBold"
                                    FontSize="24"
                                    TextColor="{StaticResource StatusWarning}" />
-                            <Label Text="Below threshold"
+                            <Label Text="At/below limit"
                                    FontSize="11"
                                    TextColor="{StaticResource MutedText}"
                                    LineBreakMode="TailTruncation" />
@@ -82,12 +82,28 @@
                 <!-- Stock Controls & Filter Bar -->
                 <Border Style="{StaticResource CardSurface}" Padding="14" Shadow="{x:Null}">
                     <VerticalStackLayout Spacing="12">
-                        <Label Text="REAL-TIME STOCK LEVELS"
-                               FontFamily="QuicksandBold"
-                               FontSize="16"
-                               TextColor="{StaticResource PrimaryBlack}" />
+                        <!-- Header with Title + New Ingredient Button -->
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <Label Grid.Column="0"
+                                   Text="RAW INGREDIENTS LEDGER"
+                                   FontFamily="QuicksandBold"
+                                   FontSize="16"
+                                   TextColor="{StaticResource PrimaryBlack}"
+                                   VerticalOptions="Center" />
 
-                        <!-- Equal-Width 3-Tab Filter Strip (Fits All Mobile Screens Without Clipping) -->
+                            <Button Grid.Column="1"
+                                    Text="+ Add Ingredient"
+                                    HeightRequest="34"
+                                    Padding="12,0"
+                                    FontSize="12"
+                                    FontFamily="QuicksandBold"
+                                    CornerRadius="8"
+                                    Style="{StaticResource PrimaryBlackButton}"
+                                    IsVisible="{Binding CanRegisterIngredients}"
+                                    Command="{Binding OpenRegistrationModalCommand}" />
+                        </Grid>
+
+                        <!-- Equal-Width 3-Tab Filter Strip -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                             <Button Grid.Column="0"
                                     Text="All Items"
@@ -172,46 +188,41 @@
                                 </Border>
                                 <Entry Grid.Column="1"
                                        Text="{Binding SearchQuery}"
-                                       Placeholder="Search product name, SKU, or category..."
+                                       Placeholder="Search raw ingredients, SKU, category..."
                                        FontSize="13"
                                        BackgroundColor="Transparent"
                                        TextColor="{StaticResource PrimaryBlack}" />
                             </Grid>
                         </Border>
 
-                        <!-- Inventory Product List (2-Row Mobile-Responsive Card per Product) -->
-                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredProducts}"
+                        <!-- Ingredients List -->
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredIngredients}"
                                              Spacing="10">
                             <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="models:Product">
+                                <DataTemplate x:DataType="models:Ingredient">
                                     <Border BackgroundColor="{StaticResource OffWhiteCream}"
                                             Stroke="{StaticResource BorderGray}"
                                             StrokeThickness="1"
                                             Padding="14,12"
                                             Shadow="{x:Null}">
                                         <Border.StrokeShape><RoundRectangle CornerRadius="14" /></Border.StrokeShape>
-                                        <VerticalStackLayout Spacing="10">
-                                            <!-- Top Row: Product Name + SKU/Category on Left, Status Pill on Right -->
+                                        <VerticalStackLayout Spacing="8">
+                                            <!-- Top Row: Ingredient Name + Status Badge -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Start">
-                                                <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                                    <Label Text="{Binding ProductName}"
-                                                           FontFamily="QuicksandBold"
-                                                           FontSize="15"
-                                                           TextColor="{StaticResource PrimaryBlack}"
-                                                           LineBreakMode="TailTruncation" />
-                                                    <Label Text="{Binding StockKeepingUnitAndCategory}"
-                                                           FontSize="12"
-                                                           TextColor="{StaticResource MutedText}"
-                                                           LineBreakMode="TailTruncation" />
-                                                </VerticalStackLayout>
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding IngredientName}"
+                                                       FontFamily="QuicksandBold"
+                                                       FontSize="15"
+                                                       TextColor="{StaticResource PrimaryBlack}"
+                                                       LineBreakMode="TailTruncation" />
 
                                                 <Border Grid.Column="1"
                                                         BackgroundColor="{StaticResource StatusSuccess}"
-                                                        Padding="10,4"
+                                                        Padding="10,3"
                                                         StrokeThickness="0"
                                                         VerticalOptions="Start"
                                                         Shadow="{x:Null}">
-                                                    <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
                                                     <Border.Triggers>
                                                         <DataTrigger TargetType="Border" Binding="{Binding IsLowStock}" Value="True">
                                                             <Setter Property="BackgroundColor" Value="{StaticResource StatusWarning}" />
@@ -227,100 +238,56 @@
                                                 </Border>
                                             </Grid>
 
-                                            <!-- Bottom Row: Current Stock Count on Left, Restock Button on Right -->
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <!-- Middle Row: SKU & Category + Unit Cost -->
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                                 <Label Grid.Column="0"
-                                                       Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}"
-                                                       FontFamily="InterSemiBold"
-                                                       FontSize="13"
-                                                       TextColor="{StaticResource PrimaryBlack}"
-                                                       VerticalOptions="Center"
+                                                       Text="{Binding StockKeepingUnitAndCategory}"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource MutedText}"
                                                        LineBreakMode="TailTruncation" />
 
-                                                <Button Grid.Column="1"
-                                                        Text="Restock / Adjust"
-                                                        Style="{StaticResource PrimaryBlackButton}"
-                                                        HeightRequest="34"
-                                                        Padding="14,0"
-                                                        CornerRadius="10"
-                                                        FontSize="12"
-                                                        IsVisible="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.CanRestockInventory}"
-                                                        Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.OpenAdjustmentModalCommand}"
-                                                        CommandParameter="{Binding .}" />
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding UnitCost, StringFormat='Cost: ₱{0:N2}'}"
+                                                       FontFamily="InterSemiBold"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource PrimaryBlack}" />
                                             </Grid>
-                                        </VerticalStackLayout>
-                                    </Border>
-                                </DataTemplate>
-                            </BindableLayout.ItemTemplate>
-                        </VerticalStackLayout>
-                    </VerticalStackLayout>
-                </Border>
 
-                <!-- Inventory Movement Ledger -->
-                <Border Style="{StaticResource CardSurface}" Padding="14" Shadow="{x:Null}">
-                    <VerticalStackLayout Spacing="12">
-                        <Label Text="INVENTORY MOVEMENT LOGS"
-                               FontFamily="QuicksandBold"
-                               FontSize="15"
-                               TextColor="{StaticResource PrimaryBlack}" />
-
-                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentInventoryLogs}"
-                                             Spacing="8">
-                            <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="models:InventoryLog">
-                                    <Border BackgroundColor="{StaticResource OffWhiteCream}"
-                                            Stroke="{StaticResource BorderGray}"
-                                            StrokeThickness="1"
-                                            Padding="12,10"
-                                            Shadow="{x:Null}">
-                                        <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
-                                        <VerticalStackLayout Spacing="6">
-                                            <!-- Top Row: Product Name + Movement Type on Left, Quantity Delta Badge on Right -->
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
-                                                <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                                    <Label Text="{Binding ProductName}"
+                                            <!-- Bottom Row: Current Stock & Total Cost on Left, Action Buttons on Right -->
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                                <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                                    <Label Text="{Binding StockDisplayText, StringFormat='Stock: {0}'}"
                                                            FontFamily="QuicksandBold"
                                                            FontSize="14"
-                                                           TextColor="{StaticResource PrimaryBlack}"
-                                                           LineBreakMode="TailTruncation" />
-                                                    <Label Text="{Binding MovementType}"
-                                                           FontFamily="InterSemiBold"
-                                                           FontSize="12"
+                                                           TextColor="{StaticResource PrimaryBlack}" />
+                                                    <Label Text="{Binding TotalValuationAtCost, StringFormat='Value: ₱{0:N2}'}"
+                                                           FontSize="11"
                                                            TextColor="{StaticResource MutedText}" />
                                                 </VerticalStackLayout>
 
-                                                <Border Grid.Column="1"
-                                                        BackgroundColor="{StaticResource PureWhite}"
-                                                        Stroke="{StaticResource BorderGray}"
-                                                        Padding="10,4"
-                                                        VerticalOptions="Center"
-                                                        Shadow="{x:Null}">
-                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                                    <Label Text="{Binding QuantityChangedDisplay}"
-                                                           FontFamily="QuicksandBold"
-                                                           FontSize="13"
-                                                           TextColor="{StaticResource PrimaryBlack}" />
-                                                </Border>
-                                            </Grid>
+                                                <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                                    <Button Text="Waste"
+                                                            HeightRequest="32"
+                                                            Padding="10,0"
+                                                            CornerRadius="8"
+                                                            FontSize="11"
+                                                            FontFamily="InterSemiBold"
+                                                            BackgroundColor="#FEE2E2"
+                                                            TextColor="{StaticResource StatusDanger}"
+                                                            IsVisible="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.CanRestockInventory}"
+                                                            Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.OpenSpoilageModalCommand}"
+                                                            CommandParameter="{Binding .}" />
 
-                                            <!-- Optional Notes Row -->
-                                            <Label Text="{Binding Remarks, StringFormat='Notes: {0}'}"
-                                                   FontSize="12"
-                                                   TextColor="{StaticResource MutedText}"
-                                                   IsVisible="{Binding Remarks, Converter={StaticResource StringNotEmptyConverter}}" />
-
-                                            <!-- Bottom Row: Operator Name on Left, Timestamp on Right -->
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                <Label Grid.Column="0"
-                                                       Text="{Binding PerformedByName, StringFormat='By: {0}'}"
-                                                       FontFamily="InterSemiBold"
-                                                       FontSize="11"
-                                                       TextColor="{StaticResource MutedText}"
-                                                       LineBreakMode="TailTruncation" />
-                                                <Label Grid.Column="1"
-                                                       Text="{Binding RecordedAtLocalDisplay}"
-                                                       FontSize="11"
-                                                       TextColor="{StaticResource MutedText}" />
+                                                    <Button Text="Restock"
+                                                            Style="{StaticResource PrimaryBlackButton}"
+                                                            HeightRequest="32"
+                                                            Padding="12,0"
+                                                            CornerRadius="8"
+                                                            FontSize="11"
+                                                            IsVisible="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.CanRestockInventory}"
+                                                            Command="{Binding Source={x:Reference InventoryPageRoot}, Path=BindingContext.OpenAdjustmentModalCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
                                             </Grid>
                                         </VerticalStackLayout>
                                     </Border>
@@ -333,29 +300,63 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Restock / Adjust Stock Modal Overlay -->
+        <!-- Smart Bulk-to-Base Restock / Adjustment Modal Overlay -->
         <Grid BackgroundColor="#73000000"
               IsVisible="{Binding IsAdjustmentModalVisible}"
               Padding="16">
             <Border Style="{StaticResource CardSurface}"
-                    MaximumWidthRequest="480"
+                    MaximumWidthRequest="460"
                     Padding="20"
                     VerticalOptions="Center"
                     HorizontalOptions="Fill"
                     Shadow="{x:Null}">
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="RESTOCK / ADJUST INVENTORY STOCK"
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="RESTOCK / ADJUST RAW INGREDIENT"
                            FontFamily="QuicksandBold"
-                           FontSize="17"
+                           FontSize="16"
                            TextColor="{StaticResource PrimaryBlack}" />
 
-                    <Label Text="{Binding SelectedAdjustmentProduct.ProductName, StringFormat='Product: {0}'}"
-                           FontFamily="InterSemiBold"
-                           FontSize="14"
-                           TextColor="{StaticResource PrimaryBlack}" />
+                    <!-- Ingredient Info Banner -->
+                    <Border BackgroundColor="{StaticResource OffWhiteCream}"
+                            Padding="12,8"
+                            StrokeThickness="0"
+                            Shadow="{x:Null}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="{Binding SelectedAdjustmentIngredient.IngredientName}"
+                                       FontFamily="QuicksandBold"
+                                       FontSize="14"
+                                       TextColor="{StaticResource PrimaryBlack}" />
+                                <Label Text="{Binding SelectedAdjustmentIngredient.StockKeepingUnitAndCategory}"
+                                       FontSize="11"
+                                       TextColor="{StaticResource MutedText}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="{Binding SelectedAdjustmentIngredient.StockDisplayText, StringFormat='Current: {0}'}"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="12"
+                                   TextColor="{StaticResource PrimaryBlack}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
 
-                    <Label Text="{Binding SelectedAdjustmentProduct.StockDisplayText, StringFormat='Current Stock: {0}'}"
-                           Style="{StaticResource MutedCaption}" />
+                    <!-- Smart Bulk Pack Mode Toggle -->
+                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Text="Use Bulk Pack Multiplier"
+                                   FontFamily="InterSemiBold"
+                                   FontSize="12"
+                                   TextColor="{StaticResource PrimaryBlack}" />
+                            <Label Text="{Binding BulkUnitLabel}"
+                                   FontSize="11"
+                                   TextColor="{StaticResource MutedText}" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IsBulkMode}"
+                                OnColor="{StaticResource PrimaryBlack}"
+                                VerticalOptions="Center" />
+                    </Grid>
 
                     <!-- Movement Type -->
                     <VerticalStackLayout Spacing="4">
@@ -367,9 +368,9 @@
                         </Border>
                     </VerticalStackLayout>
 
-                    <!-- Quantity Change -->
+                    <!-- Quantity Input with Unit Suffix -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Quantity Change (+ to add, - to deduct)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Quantity" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
                         <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasQuantityChangeError}" Value="True">
@@ -377,14 +378,31 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding QuantityChangeText}" Keyboard="Numeric" Placeholder="e.g. 20 or -2" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding QuantityChangeText}"
+                                   Keyboard="Numeric"
+                                   Placeholder="e.g. 5 (liters/packs) or 500 (ml/g)"
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
                         </Border>
                         <Label Text="{Binding QuantityChangeError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasQuantityChangeError}" />
                     </VerticalStackLayout>
 
-                    <!-- Reason / Notes -->
+                    <!-- Live Conversion Preview Pill -->
+                    <Border BackgroundColor="#E0F2FE"
+                            Padding="10,6"
+                            StrokeThickness="0"
+                            Shadow="{x:Null}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="6" /></Border.StrokeShape>
+                        <Label Text="{Binding RestockPreviewText}"
+                               FontFamily="InterSemiBold"
+                               FontSize="12"
+                               TextColor="#0369A1"
+                               HorizontalOptions="Center" />
+                    </Border>
+
+                    <!-- Reason / Remarks -->
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Reason / Notes (min 5 chars for Spoilage / Correction)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                        <Label Text="Reason / Remarks (Required for Waste)" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
                         <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding HasAdjustmentRemarksError}" Value="True">
@@ -392,23 +410,125 @@
                                     <Setter Property="StrokeThickness" Value="1.5" />
                                 </DataTrigger>
                             </Border.Triggers>
-                            <Entry Text="{Binding AdjustmentRemarks}" Placeholder="e.g. Morning delivery or expired milk batch" BackgroundColor="Transparent" />
+                            <Entry Text="{Binding AdjustmentRemarks}"
+                                   Placeholder="e.g. Morning delivery supplier invoice #1029"
+                                   BackgroundColor="Transparent"
+                                   TextColor="{StaticResource PrimaryBlack}" />
                         </Border>
                         <Label Text="{Binding AdjustmentRemarksError}" Style="{StaticResource InlineErrorLabel}" IsVisible="{Binding HasAdjustmentRemarksError}" />
                     </VerticalStackLayout>
 
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,6,0,0">
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,4,0,0">
                         <Button Grid.Column="0"
                                 Text="Cancel"
                                 Style="{StaticResource OutlineSecondaryButton}"
                                 Command="{Binding CloseAdjustmentModalCommand}" />
                         <Button Grid.Column="1"
-                                Text="Save Stock Adjustment"
+                                Text="Apply Adjustment"
                                 Style="{StaticResource PrimaryBlackButton}"
                                 IsEnabled="{Binding CanSubmitAdjustment}"
                                 Command="{Binding SubmitStockAdjustmentCommand}" />
                     </Grid>
                 </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- Register New Ingredient Modal Overlay -->
+        <Grid BackgroundColor="#73000000"
+              IsVisible="{Binding IsRegistrationModalVisible}"
+              Padding="16">
+            <Border Style="{StaticResource CardSurface}"
+                    MaximumWidthRequest="480"
+                    Padding="20"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill"
+                    Shadow="{x:Null}">
+                <ScrollView MaximumHeightRequest="520">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="REGISTER NEW RAW INGREDIENT"
+                               FontFamily="QuicksandBold"
+                               FontSize="16"
+                               TextColor="{StaticResource PrimaryBlack}" />
+
+                        <!-- Name -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Ingredient Name" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                <Entry Text="{Binding NewIngredientName}" Placeholder="e.g. Fresh Milk, Espresso Beans" BackgroundColor="Transparent" TextColor="{StaticResource PrimaryBlack}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- SKU & Category -->
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="SKU Code" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                                <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                    <Entry Text="{Binding NewIngredientSku}" Placeholder="ING-MLK-01" BackgroundColor="Transparent" TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="Base Unit" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                                <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                    <Picker ItemsSource="{Binding MeasurementUnitOptions}"
+                                            SelectedItem="{Binding NewMeasurementUnit}"
+                                            TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Category -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Category" FontFamily="InterSemiBold" FontSize="12" TextColor="{StaticResource PrimaryBlack}" />
+                            <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                <Picker ItemsSource="{Binding CategoryOptions}"
+                                        SelectedItem="{Binding NewIngredientCategory}"
+                                        TextColor="{StaticResource PrimaryBlack}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Initial Stock, Threshold, Unit Cost -->
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Initial Stock" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource PrimaryBlack}" />
+                                <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                    <Entry Text="{Binding NewCurrentStockText}" Keyboard="Numeric" BackgroundColor="Transparent" TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="Low Threshold" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource PrimaryBlack}" />
+                                <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                    <Entry Text="{Binding NewLowStockThresholdText}" Keyboard="Numeric" BackgroundColor="Transparent" TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="2" Spacing="4">
+                                <Label Text="Unit Cost (₱)" FontFamily="InterSemiBold" FontSize="11" TextColor="{StaticResource PrimaryBlack}" />
+                                <Border Style="{StaticResource InputFieldBorder}" Shadow="{x:Null}">
+                                    <Entry Text="{Binding NewUnitCostText}" Keyboard="Numeric" BackgroundColor="Transparent" TextColor="{StaticResource PrimaryBlack}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label Text="{Binding RegistrationError}"
+                               Style="{StaticResource InlineErrorLabel}"
+                               IsVisible="{Binding HasRegistrationError}" />
+
+                        <!-- Action Buttons -->
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,6,0,0">
+                            <Button Grid.Column="0"
+                                    Text="Cancel"
+                                    Style="{StaticResource OutlineSecondaryButton}"
+                                    Command="{Binding CloseRegistrationModalCommand}" />
+                            <Button Grid.Column="1"
+                                    Text="Save Raw Ingredient"
+                                    Style="{StaticResource PrimaryBlackButton}"
+                                    Command="{Binding SubmitNewIngredientCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
             </Border>
         </Grid>
     </Grid>
